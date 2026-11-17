@@ -1,0 +1,83 @@
+import { Event } from "../models/Event";
+import { Connection } from "../models/Connection";
+
+export async function listEvents() {
+  return Event.find().sort({ date: -1 });
+}
+
+export async function createEvent(data: Record<string, unknown>) {
+  return Event.create(data);
+}
+
+export async function updateEvent(id: string, data: Record<string, unknown>) {
+  return Event.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+}
+
+export async function getEvent(id: string) {
+  return Event.findById(id);
+}
+
+export async function generateSeating(eventId: string) {
+  const event = await Event.findById(eventId);
+  if (!event) throw Object.assign(new Error("Event not found"), { status: 404 });
+
+  const ids = event.attendeeIds.map(String);
+  const connections = await Connection.find({
+    fromMemberId: { $in: event.attendeeIds },
+    toMemberId: { $in: event.attendeeIds },
+  });
+
+  const scoreMap = new Map<string, number>();
+  for (const connection of connections) {
+    const from = String(connection.fromMemberId);
+    const to = String(connection.toMemberId);
+    scoreMap.set(`${from}:${to}`, connection.weight);
+    scoreMap.set(`${to}:${from}`, connection.weight);
+  }
+
+  const capacity = event.tableCapacity || 10;
+  const tableCount = event.tableCount || Math.ceil(ids.length / capacity);
+  const tables = Array.from({ length: tableCount }, (_, index) => ({
+    name: `Table ${index + 1}`,
+    capacity,
+    memberIds: [] as string[],
+    lockedMemberIds: [] as string[],
+  }));
+
+  for (const id of ids) {
+    let bestIndex = 0;
+    let bestScore = -Infinity;
+    tables.forEach((table, index) => {
+      if (table.memberIds.length >= table.capacity) return;
+      let pairScore = 0;
+      for (const other of table.memberIds) {
+        pairScore += scoreMap.get(`${id}:${other}`) || 0;
+      }
+      if (pairScore > bestScore) {
+        bestScore = pairScore;
+        bestIndex = index;
+      }
+    });
+    tables[bestIndex].memberIds.push(id);
+  }
+
+  let score = 0;
+  for (const table of tables) {
+    for (let i = 0; i < table.memberIds.length; i += 1) {
+      for (let j = i + 1; j < table.memberIds.length; j += 1) {
+        score += scoreMap.get(`${table.memberIds[i]}:${table.memberIds[j]}`) || 0;
+      }
+    }
+  }
+
+  event.seatingPlans.push({
+    name: `Generated ${new Date().toLocaleString()}`,
+    score,
+    tables,
+    lockedMemberIds: [],
+    isFinal: false,
+  } as never);
+
+  await event.save();
+  return event;
+}
