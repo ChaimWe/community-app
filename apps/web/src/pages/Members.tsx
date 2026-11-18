@@ -4,7 +4,6 @@ import {
   useArchiveMember,
   useCreateMember,
   useDeleteMember,
-  useMember,
   useMembers,
   useRestoreMember,
   useUpdateMember,
@@ -20,11 +19,11 @@ export function Members() {
   const [search, setSearch] = useState("");
   const [program, setProgram] = useState("");
   const [memberId, setMemberId] = useState<string>();
+  const [selectedMember, setSelectedMember] = useState<Member>();
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [includeArchived, setIncludeArchived] = useState(false);
   const members = useMembers(search, program, includeArchived);
-  const selectedMember = useMember(memberId);
   const createMember = useCreateMember();
   const updateMember = useUpdateMember();
   const archiveMember = useArchiveMember();
@@ -39,6 +38,7 @@ export function Members() {
   }, [query]);
 
   function openMember(member: Member) {
+    setSelectedMember(member);
     setMemberId(member._id);
     setEditOpen(true);
   }
@@ -121,32 +121,33 @@ export function Members() {
       </Modal>
 
       <Modal
-        title={selectedMember.data ? memberName(selectedMember.data) : "Member details"}
+        title={selectedMember ? memberName(selectedMember) : "Member details"}
         open={editOpen}
         footer={null}
         onCancel={() => {
           setEditOpen(false);
           setMemberId(undefined);
+          setSelectedMember(undefined);
         }}
         destroyOnClose
         width={640}
       >
-        {selectedMember.isLoading ? <p>Loading member...</p> : null}
-        {selectedMember.data ? (
+        {selectedMember ? (
           <>
             <MemberForm
-              initial={selectedMember.data}
+              initial={selectedMember}
               readOnly={readOnly}
               onSubmit={async (data) => {
                 await updateMember.mutateAsync({ id: memberId!, data });
                 message.success("Member updated");
                 setEditOpen(false);
                 setMemberId(undefined);
+                setSelectedMember(undefined);
               }}
             />
             {!readOnly ? (
               <div className="member-lifecycle-actions">
-                {selectedMember.data.archived ? (
+                {selectedMember.archived ? (
                   <Popconfirm
                     title="Restore this member?"
                     onConfirm={async () => {
@@ -154,6 +155,7 @@ export function Members() {
                       message.success("Member restored");
                       setEditOpen(false);
                       setMemberId(undefined);
+                      setSelectedMember(undefined);
                     }}
                   >
                     <Button>Restore member</Button>
@@ -167,6 +169,7 @@ export function Members() {
                       message.success("Member archived");
                       setEditOpen(false);
                       setMemberId(undefined);
+                      setSelectedMember(undefined);
                     }}
                   >
                     <Button>Archive member</Button>
@@ -183,6 +186,7 @@ export function Members() {
                       message.success("Member permanently deleted");
                       setEditOpen(false);
                       setMemberId(undefined);
+                      setSelectedMember(undefined);
                     }}
                   >
                     <Button danger>Delete permanently</Button>
