@@ -17,19 +17,28 @@ function GoogleMark() {
 export function Login() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const [emailOpen, setEmailOpen] = useState(false);
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(params.get("error") || "");
+  const [successMessage, setSuccessMessage] = useState("");
 
-  async function submit(values: { email: string; password: string }) {
+  async function submit(values: { name?: string; email: string; password: string }) {
     setSubmitting(true);
     setError("");
+    setSuccessMessage("");
     try {
+      if (mode === "register") {
+        await api.post("/auth/register", values);
+        setSuccessMessage("Your request has been submitted. An admin will review and approve your access.");
+        setMode("login");
+        return;
+      }
+
       await api.post("/auth/login", values);
       navigate("/");
     } catch (caught: unknown) {
       const response = caught as { response?: { data?: { message?: string } } };
-      setError(response.response?.data?.message || "Login failed");
+      setError(response.response?.data?.message || (mode === "register" ? "Request failed" : "Login failed"));
     } finally {
       setSubmitting(false);
     }
@@ -47,26 +56,51 @@ export function Login() {
       </section>
       <section className="login-form">
         <div>
-          <p className="eyebrow">Admin sign in</p>
-          <h2>Welcome back</h2>
-          <p className="lede">Use an approved email account. Google sign-in is temporarily disabled.</p>
+          <p className="eyebrow">{mode === "login" ? "Member sign in" : "Request access"}</p>
+          <h2>{mode === "login" ? "Welcome back" : "Create your account"}</h2>
+          <p className="lede">
+            {mode === "login"
+              ? "Use an approved email account. Google sign-in is temporarily disabled."
+              : "Create an account and your request will be reviewed by an administrator before access is granted."}
+          </p>
           {error ? <div className="banner">{error}</div> : null}
-          <button type="button" className="text-link email-toggle" onClick={() => setEmailOpen((open) => !open)}>
-            {emailOpen ? "Hide email sign in" : "Sign in with email instead"}
+          {successMessage ? <div className="banner success">{successMessage}</div> : null}
+
+          <button
+            type="button"
+            className="text-link email-toggle"
+            onClick={() => {
+              setError("");
+              setSuccessMessage("");
+              setMode((current) => (current === "login" ? "register" : "login"));
+            }}
+          >
+            {mode === "login" ? "Need access? Request an account" : "Already approved? Sign in instead"}
           </button>
-          {emailOpen ? (
-            <Form layout="vertical" onFinish={submit} requiredMark={false}>
-              <Form.Item name="email" label="Email" rules={[{ required: true, type: "email" }]}>
-                <Input autoComplete="username" placeholder="you@community.org" />
+
+          <Form layout="vertical" onFinish={submit} requiredMark={false}>
+            {mode === "register" ? (
+              <Form.Item name="name" label="Full name" rules={[{ required: true, message: "Please enter your name" }]}>
+                <Input autoComplete="name" placeholder="Your full name" />
               </Form.Item>
-              <Form.Item name="password" label="Password" rules={[{ required: true }]}>
-                <Input.Password autoComplete="current-password" placeholder="Password" />
-              </Form.Item>
-              <Button type="primary" htmlType="submit" block loading={submitting}>
-                Sign in
-              </Button>
-            </Form>
-          ) : null}
+            ) : null}
+
+            <Form.Item name="email" label="Email" rules={[{ required: true, type: "email" }]}>
+              <Input autoComplete={mode === "register" ? "email" : "username"} placeholder="you@community.org" />
+            </Form.Item>
+
+            <Form.Item name="password" label="Password" rules={[{ required: true, message: "Please enter a password" }]}>
+              <Input.Password autoComplete={mode === "register" ? "new-password" : "current-password"} placeholder="Password" />
+            </Form.Item>
+
+            <Button type="primary" htmlType="submit" block loading={submitting}>
+              {mode === "register" ? "Request access" : "Sign in"}
+            </Button>
+          </Form>
+
+          <div style={{ marginTop: 16, opacity: 0.8 }}>
+            {mode === "login" ? "Google sign-in is temporarily disabled." : "Admins will approve new accounts before login is allowed."}
+          </div>
         </div>
       </section>
     </div>

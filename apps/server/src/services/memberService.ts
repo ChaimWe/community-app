@@ -1,15 +1,30 @@
 import { Member } from "../models/Member";
 
-function searchFilter(search: string) {
-  if (!search) return {};
-  const pattern = { $regex: search, $options: "i" };
-  return {
-    $or: [{ firstName: pattern }, { surname: pattern }, { telephone: pattern }, { email: pattern }],
-  };
+function searchFilter(search: string, program = "") {
+  const filters: Record<string, unknown>[] = [];
+
+  if (search) {
+    const pattern = { $regex: search, $options: "i" };
+    filters.push({
+      $or: [
+        { firstName: pattern },
+        { surname: pattern },
+        { telephone: pattern },
+        { email: pattern },
+        { programs: pattern },
+      ],
+    });
+  }
+
+  if (program) {
+    filters.push({ programs: program });
+  }
+
+  return filters.length ? { $and: filters } : {};
 }
 
-export async function listMembers(search = "") {
-  return Member.find(searchFilter(search)).sort({ surname: 1, firstName: 1 }).limit(1000);
+export async function listMembers(search = "", program = "") {
+  return Member.find(searchFilter(search, program)).sort({ surname: 1, firstName: 1 }).limit(1000);
 }
 
 export async function getMember(id: string) {

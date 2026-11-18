@@ -1,49 +1,85 @@
-import { Button, message } from "antd";
+import { Button, Input, Select, message } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../api/client";
 import { Member, SeatingPlan, SeatingTable } from "../../api/types";
-import { asId, memberInitials, memberName } from "../../lib/labels";
+import { asId, memberInitials, memberName, PROGRAM_OPTIONS } from "../../lib/labels";
 
 export function SeatingMap({
   eventId,
   plan,
   members,
+  attendeeIds,
   onSaved,
 }: {
   eventId: string;
   plan: SeatingPlan;
   members: Member[];
+  attendeeIds: string[];
   onSaved: () => void;
 }) {
   const [tables, setTables] = useState<SeatingTable[]>(() =>
     (plan.tables || []).map((table) => ({ ...table, memberIds: (table.memberIds || []).map(asId) })),
   );
-  const [dragged, setDragged] = useState<{ id: string; from: number } | null>(null);
+  const [dragged, setDragged] = useState<{ id: string; from: number | null } | null>(null);
   const [over, setOver] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [guestSearch, setGuestSearch] = useState("");
+  const [programFilter, setProgramFilter] = useState("");
   const names = useMemo(() => new Map(members.map((member) => [member._id, memberName(member)])), [members]);
 
   useEffect(() => {
     setTables((plan.tables || []).map((table) => ({ ...table, memberIds: (table.memberIds || []).map(asId) })));
   }, [plan]);
 
-  function drop(to: number) {
+  const seatedIds = useMemo(() => new Set(tables.flatMap((table) => table.memberIds)), [tables]);
+  const attendeeSet = useMemo(() => new Set(attendeeIds.map(asId)), [attendeeIds]);
+  const memberById = useMemo(() => new Map(members.map((member) => [member._id, member])), [members]);
+
+  const visibleUnseated = useMemo(() => {
+    const search = guestSearch.trim().toLowerCase();
+    return members.filter((member) => {
+      const id = asId(member._id);
+      if (!attendeeSet.has(id) || seatedIds.has(id)) return false;
+      const name = memberName(member).toLowerCase();
+      if (search && !name.includes(search)) return false;
+      if (programFilter && !(member.programs || []).includes(programFilter)) return false;
+      return true;
+    });
+  }, [members, attendeeSet, seatedIds, guestSearch, programFilter]);
+
+  function matchesFilters(memberId: string) {
+    const member = memberById.get(memberId);
+    if (!member) return true;
+    const search = guestSearch.trim().toLowerCase();
+    if (search && !memberName(member).toLowerCase().includes(search)) return false;
+    if (programFilter && !(member.programs || []).includes(programFilter)) return false;
+    return true;
+  }
+
+  function drop(to: number | null) {
     if (!dragged) return;
     setOver(null);
-    if (dragged.from === to) {
-      setDragged(null);
-      return;
-    }
+
     const next = tables.map((table) => ({ ...table, memberIds: [...(table.memberIds || [])] }));
-    if (next[to].memberIds.length >= next[to].capacity) {
-      message.warning("That table is full");
-      setDragged(null);
-      return;
+
+    if (dragged.from !== null) {
+      const index = next[dragged.from].memberIds.indexOf(dragged.id);
+      if (index >= 0) next[dragged.from].memberIds.splice(index, 1);
     }
-    const fromIds = next[dragged.from].memberIds;
-    const index = fromIds.indexOf(dragged.id);
-    if (index >= 0) fromIds.splice(index, 1);
-    next[to].memberIds.push(dragged.id);
+
+    if (to !== null) {
+      if (next[to].memberIds.length >= next[to].capacity) {
+        if (dragged.from !== null) {
+          const index = next[dragged.from].memberIds.indexOf(dragged.id);
+          if (index < 0) next[dragged.from].memberIds.push(dragged.id);
+        }
+        message.warning("That table is full");
+        setDragged(null);
+        return;
+      }
+      next[to].memberIds.push(dragged.id);
+    }
+
     setTables(next);
     setDragged(null);
   }
@@ -67,12 +103,67 @@ export function SeatingMap({
 
   return (
     <div>
+      <div className="seating-filter-bar">
+        <Input.Search
+          allowClear
+          placeholder="Filter guests by name"
+          value={guestSearch}
+          onChange={(event) => setGuestSearch(event.target.value)}
+        />
+        <Select
+          allowClear
+          placeholder="Filter by program"
+          value={programFilter || undefined}
+          onChange={(value) => setProgramFilter(value || "")}
+          options={PROGRAM_OPTIONS.map((value) => ({ value, label: value }))}
+        />
+      </div>
+
+      <section
+        className={over === -1 ? "unseated-pool is-over" : "unseated-pool"}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setOver(-1);
+        }}
+        onDragLeave={() => setOver((current) => (current === -1 ? null : current))}
+        onDrop={() => drop(null)}
+      >
+        <header>
+          <strong>Unseated guests</strong>
+          <span>{visibleUnseated.length} shown</span>
+        </header>
+        <div className="pool-seats">
+          {visibleUnseated.map((member) => {
+            const id = asId(member._id);
+            const name = memberName(member);
+            return (
+              <button
+                key={id}
+                type="button"
+                className="seat"
+                draggable
+                onDragStart={() => setDragged({ id, from: null })}
+                onDragEnd={() => {
+                  setDragged(null);
+                  setOver(null);
+                }}
+              >
+                <span>{memberInitials(name)}</span>
+                {name}
+              </button>
+            );
+          })}
+          {visibleUnseated.length === 0 ? <em>No matching unseated guests</em> : null}
+        </div>
+      </section>
+
       <div className="plan-actions">
-        <p>Drag a guest onto another table. A full table will not take another seat.</p>
+        <p>Drag filtered guests into seats or move them back to the unseated pool.</p>
         <Button type="primary" onClick={save} loading={saving}>
           Save seating
         </Button>
       </div>
+
       <div className="tables">
         {tables.map((table, index) => (
           <section
@@ -93,7 +184,7 @@ export function SeatingMap({
             </header>
             <div className="seats">
               {table.memberIds.length === 0 ? <em>Empty table</em> : null}
-              {table.memberIds.map((id) => {
+              {table.memberIds.filter(matchesFilters).map((id) => {
                 const name = names.get(id) || "Unknown guest";
                 return (
                   <button
@@ -112,6 +203,9 @@ export function SeatingMap({
                   </button>
                 );
               })}
+              {table.memberIds.length > 0 && table.memberIds.filter(matchesFilters).length === 0 ? (
+                <em>No matching guests at this table</em>
+              ) : null}
             </div>
           </section>
         ))}

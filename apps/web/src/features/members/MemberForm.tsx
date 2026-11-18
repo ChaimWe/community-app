@@ -1,12 +1,22 @@
 import { Button, DatePicker, Form, Input, Select } from "antd";
 import dayjs from "dayjs";
 import { Member, MemberInput } from "../../api/types";
+import { PROGRAM_OPTIONS } from "../../lib/labels";
 
-export function MemberForm({ initial, onSubmit }: { initial?: Member; onSubmit: (values: MemberInput) => Promise<void> | void }) {
+export function MemberForm({
+  initial,
+  onSubmit,
+  readOnly = false,
+}: {
+  initial?: Member;
+  onSubmit: (values: MemberInput) => Promise<void> | void;
+  readOnly?: boolean;
+}) {
   return (
     <Form
       layout="vertical"
       requiredMark={false}
+      disabled={readOnly}
       initialValues={{
         ...initial,
         birthday: initial?.birthday ? dayjs(initial.birthday) : undefined,
@@ -60,16 +70,16 @@ export function MemberForm({ initial, onSubmit }: { initial?: Member; onSubmit: 
         <Input />
       </Form.Item>
       <p className="form-label">Community</p>
-      <div className="split">
-        <Form.Item name="jewishStatus" label="Jewish status">
-          <Input />
-        </Form.Item>
-        <Form.Item name="minyanAttendance" label="Minyan attendance">
-          <Input />
-        </Form.Item>
-      </div>
+      <Form.Item name="jewishStatus" label="Jewish status">
+        <Input />
+      </Form.Item>
       <Form.Item name="programs" label="Programs">
-        <Select mode="tags" placeholder="Add a program and press enter" />
+        <Select
+          mode="multiple"
+          allowClear
+          placeholder="Select community programs"
+          options={PROGRAM_OPTIONS.map((value: string) => ({ value, label: value }))}
+        />
       </Form.Item>
       <Form.Item name="comments" label="Comments">
         <Input.TextArea rows={3} />
@@ -80,9 +90,11 @@ export function MemberForm({ initial, onSubmit }: { initial?: Member; onSubmit: 
       <Form.Item name="documentLocation" label="Document location">
         <Input />
       </Form.Item>
-      <Button type="primary" htmlType="submit">
-        Save member
-      </Button>
+      {!readOnly && (
+        <Button type="primary" htmlType="submit">
+          Save member
+        </Button>
+      )}
     </Form>
   );
 }

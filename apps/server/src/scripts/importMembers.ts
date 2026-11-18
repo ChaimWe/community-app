@@ -15,7 +15,6 @@ type ImportedMember = {
   email?: string;
   address?: string;
   jewishStatus?: string;
-  minyanAttendance?: string;
   programs?: string[];
   comments?: string;
   comments2?: string;
@@ -50,7 +49,6 @@ async function run() {
       email,
       address: record.address || "",
       jewishStatus: record.jewishStatus || "",
-      minyanAttendance: record.minyanAttendance || "",
       programs: Array.isArray(record.programs) ? record.programs : [],
       comments: record.comments || "",
       comments2: record.comments2 || "",
@@ -58,7 +56,7 @@ async function run() {
     };
 
     if (existing) {
-      await Member.updateOne({ _id: existing._id }, { $set: data });
+      await Member.updateOne({ _id: existing._id }, { $set: data, $unset: { minyanAttendance: "" } });
       updated += 1;
     } else {
       await Member.create(data);

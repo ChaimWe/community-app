@@ -30,6 +30,10 @@ const schema = new Schema(
     attendeeIds: { type: [Schema.Types.ObjectId], ref: "Member", default: [] },
     tableCount: { type: Number, default: 0 },
     tableCapacity: { type: Number, default: 10 },
+    tableConfigurations: {
+      type: [{ name: { type: String, required: true }, capacity: { type: Number, required: true, min: 1 } }],
+      default: [],
+    },
     seatingPlans: { type: [seatingSchema], default: [] },
   },
   { timestamps: true },

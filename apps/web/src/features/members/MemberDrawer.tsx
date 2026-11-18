@@ -1,12 +1,15 @@
 import { Drawer, Spin, message } from "antd";
 import { useMember, useUpdateMember } from "../../api/hooks";
 import { memberInitials, memberName } from "../../lib/labels";
+import { useSession } from "../../api/session";
 import { MemberForm } from "./MemberForm";
 
 export function MemberDrawer({ id, onClose }: { id?: string; onClose: () => void }) {
   const member = useMember(id);
   const updateMember = useUpdateMember();
+  const session = useSession();
   const name = memberName(member.data);
+  const readOnly = !session.data?.isAdmin && session.data?.permission !== "edit";
 
   return (
     <Drawer
@@ -34,6 +37,7 @@ export function MemberDrawer({ id, onClose }: { id?: string; onClose: () => void
               message.success("Saved");
               onClose();
             }}
+            readOnly={readOnly}
           />
         </>
       ) : null}

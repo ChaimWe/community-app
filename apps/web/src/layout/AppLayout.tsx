@@ -6,6 +6,7 @@ import {
   LogoutOutlined,
   MenuOutlined,
   CloseOutlined,
+  UserAddOutlined,
 } from "@ant-design/icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -33,6 +34,10 @@ export function AppLayout() {
     },
   });
 
+  const visibleLinks = session.data?.isAdmin
+    ? [...links, { to: "/pending", label: "Pending requests", icon: <UserAddOutlined /> }]
+    : links;
+
   return (
     <div className="shell">
       <aside className={`nav ${mobileMenuOpen ? "open" : ""}`}>
@@ -41,7 +46,7 @@ export function AppLayout() {
             <span className="mark">C</span>
             <span>
               <strong>CommunityApp</strong>
-              <small>Admin workspace</small>
+              <small>{session.data?.isAdmin ? "Admin workspace" : session.data?.permission === "edit" ? "Editor workspace" : "View-only workspace"}</small>
             </span>
           </div>
           <button
@@ -54,7 +59,7 @@ export function AppLayout() {
           </button>
         </div>
         <nav>
-          {links.map((link) => (
+          {visibleLinks.map((link) => (
             <NavLink key={link.to} to={link.to} end={link.to === "/"} onClick={() => setMobileMenuOpen(false)}>
               {link.icon}
               {link.label}

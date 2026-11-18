@@ -4,6 +4,9 @@ import { api } from "./client";
 export interface Session {
   name: string;
   email: string;
+  approved: boolean;
+  permission: "view" | "edit";
+  isAdmin: boolean;
 }
 
 export function useSession() {

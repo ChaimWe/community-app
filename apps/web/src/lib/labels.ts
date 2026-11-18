@@ -13,6 +13,22 @@ export const SEATING_MODE_LABELS: Record<string, string> = {
   SPREAD: "Spread across tables",
 };
 
+export const PROGRAM_OPTIONS = [
+  "Babies 1-5",
+  "Kids: 6-12",
+  "Teens 13-17",
+  "Young adults 18-30",
+  "Women's club 20-40",
+  "Middle women's club 40-65",
+  "Elderly women 65+",
+  "Regular Minyan",
+  "Sometimes Minyan",
+  "Potential Minyan",
+  "Men 20-40",
+  "Need of packages delivered",
+  "Need of visitation",
+] as const;
+
 export const EVENT_TYPE_LABELS: Record<string, string> = {
   HOLIDAY_MEAL: "Holiday meal",
   AGE_GROUP: "Age group",

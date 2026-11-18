@@ -10,7 +10,22 @@ export async function createEvent(data: Record<string, unknown>) {
 }
 
 export async function updateEvent(id: string, data: Record<string, unknown>) {
-  return Event.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+  const event = await Event.findById(id);
+  if (!event) return null;
+
+  if (Array.isArray(data.attendeeIds)) {
+    const attendeeIds = data.attendeeIds.map(String);
+    const allowed = new Set(attendeeIds);
+    for (const plan of event.seatingPlans) {
+      for (const table of plan.tables) {
+        table.memberIds = table.memberIds.filter((memberId) => allowed.has(String(memberId))) as never;
+      }
+    }
+  }
+
+  Object.assign(event, data);
+  await event.save();
+  return event;
 }
 
 export async function getEvent(id: string) {
@@ -37,9 +52,12 @@ export async function generateSeating(eventId: string) {
 
   const capacity = event.tableCapacity || 10;
   const tableCount = event.tableCount || Math.ceil(ids.length / capacity);
-  const tables = Array.from({ length: tableCount }, (_, index) => ({
-    name: `Table ${index + 1}`,
-    capacity,
+  const configurations = event.tableConfigurations?.length
+    ? event.tableConfigurations.map((table) => ({ name: table.name, capacity: table.capacity }))
+    : Array.from({ length: tableCount }, (_, index) => ({ name: `Table ${index + 1}`, capacity }));
+  const tables = configurations.map((table) => ({
+    name: table.name,
+    capacity: table.capacity,
     memberIds: [] as string[],
     lockedMemberIds: [] as string[],
   }));

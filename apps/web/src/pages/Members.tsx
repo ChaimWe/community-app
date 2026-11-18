@@ -1,17 +1,19 @@
-import { Button, Form, Input, Modal, Table, message } from "antd";
+import { Button, Input, Modal, Select, Table, Tag, message } from "antd";
 import { useEffect, useState } from "react";
 import { useCreateMember, useMembers } from "../api/hooks";
 import { Member } from "../api/types";
 import { PageHeader } from "../components/PageHeader";
 import { MemberDrawer } from "../features/members/MemberDrawer";
 import { MemberForm } from "../features/members/MemberForm";
+import { PROGRAM_OPTIONS } from "../lib/labels";
 
 export function Members() {
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
+  const [program, setProgram] = useState("");
   const [memberId, setMemberId] = useState<string>();
   const [open, setOpen] = useState(false);
-  const members = useMembers(search);
+  const members = useMembers(search, program);
   const createMember = useCreateMember();
 
   useEffect(() => {
@@ -24,20 +26,30 @@ export function Members() {
       <PageHeader
         eyebrow="Directory"
         title="Members"
-        text="Search by name, phone, or email. Open a row to edit the record."
+        text="Search by name, phone, email, or program. Open a row to edit the record."
         action={
           <Button type="primary" onClick={() => setOpen(true)}>
             Add member
           </Button>
         }
       />
-      <Input.Search
-        className="search"
-        placeholder="Search name, phone, or email"
-        allowClear
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-      />
+      <div className="member-tools">
+        <Input.Search
+          className="search"
+          placeholder="Search members or programs"
+          allowClear
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        <Select
+          allowClear
+          className="program-filter"
+          placeholder="Filter by program"
+          value={program || undefined}
+          onChange={(value) => setProgram(value || "")}
+          options={PROGRAM_OPTIONS.map((value) => ({ value, label: value }))}
+        />
+      </div>
       <div className="panel table-panel">
         <Table<Member>
           rowKey="_id"
@@ -45,13 +57,19 @@ export function Members() {
           dataSource={members.data || []}
           pagination={{ pageSize: 12, hideOnSinglePage: true }}
           onRow={(record) => ({ onClick: () => setMemberId(record._id), style: { cursor: "pointer" } })}
-          locale={{ emptyText: search ? "No members match that search." : "No members yet." }}
+          locale={{ emptyText: search || program ? "No members match that filter." : "No members yet." }}
           columns={[
             { title: "Surname", dataIndex: "surname", sorter: (a, b) => (a.surname || "").localeCompare(b.surname || "") },
             { title: "First name", dataIndex: "firstName" },
             { title: "Phone", dataIndex: "telephone", render: (value) => value || "—" },
             { title: "Email", dataIndex: "email", render: (value) => value || "—" },
-            { title: "Birthday", dataIndex: "birthday", render: (value) => value || "—" },
+            {
+              title: "Programs",
+              dataIndex: "programs",
+              render: (values: string[] = []) => values.length
+                ? values.map((value) => <Tag key={value}>{value}</Tag>)
+                : "—",
+            },
           ]}
         />
       </div>

@@ -3,7 +3,7 @@ import { routeId } from "../lib/routeId";
 import * as service from "../services/memberService";
 
 export async function list(req: Request, res: Response) {
-  res.json(await service.listMembers(String(req.query.search || "")));
+  res.json(await service.listMembers(String(req.query.search || ""), String(req.query.program || "")));
 }
 
 export async function get(req: Request, res: Response) {

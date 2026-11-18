@@ -33,3 +33,11 @@ export async function requireAdmin(req: AuthRequest, res: Response, next: NextFu
   if (!req.isAdmin) return res.status(403).json({ message: "Admin access required" });
   next();
 }
+
+export function requireEdit(req: AuthRequest, res: Response, next: NextFunction) {
+  if (!req.userId) return res.status(401).json({ message: "Authentication required" });
+  if (!req.isAdmin && req.userPermission !== "edit") {
+    return res.status(403).json({ message: "Edit permission required" });
+  }
+  next();
+}

@@ -1,4 +1,5 @@
-import { Button, DatePicker, Form, Input, InputNumber, Modal, Select, Skeleton, message } from "antd";
+import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
+import { Button, Checkbox, DatePicker, Form, Input, InputNumber, Modal, Select, Skeleton, message } from "antd";
 import dayjs from "dayjs";
 import { useState } from "react";
 import { useCreateEvent, useEvents, useGenerateSeating, useMembers, useUpdateEvent } from "../api/hooks";
@@ -51,19 +52,12 @@ export function Events() {
                 </header>
                 <div className="event-meta">
                   <span>
-                    {event.tableCount} tables · {event.tableCapacity} seats
+                    {event.tableConfigurations?.length
+                      ? event.tableConfigurations.map((table) => `${table.name}: ${table.capacity}`).join(" · ")
+                      : `${event.tableCount} tables · ${event.tableCapacity} seats per table`}
                   </span>
                   <span>{event.attendeeIds?.length || 0} guests</span>
                 </div>
-                <Select
-                  mode="multiple"
-                  className="guest-select"
-                  placeholder="Add guests"
-                  options={memberOptions}
-                  optionFilterProp="label"
-                  value={event.attendeeIds || []}
-                  onChange={(attendeeIds) => updateEvent.mutate({ id: event._id, data: { attendeeIds } })}
-                />
                 {plan ? (
                   <div className="plan">
                     <div className="plan-head">
@@ -81,7 +75,13 @@ export function Events() {
                         Generate again
                       </Button>
                     </div>
-                    <SeatingMap eventId={event._id} plan={plan} members={members.data || []} onSaved={() => events.refetch()} />
+                    <SeatingMap
+                      eventId={event._id}
+                      plan={plan}
+                      members={members.data || []}
+                      attendeeIds={event.attendeeIds || []}
+                      onSaved={() => events.refetch()}
+                    />
                   </div>
                 ) : (
                   <div className="plan-empty">
@@ -99,6 +99,34 @@ export function Events() {
                     </Button>
                   </div>
                 )}
+                <section className="event-attendance">
+                  <div className="event-attendance-header">
+                    <strong>Who is coming?</strong>
+                    <span>{event.attendeeIds?.length || 0} of {(members.data || []).length} members marked coming</span>
+                  </div>
+                  <div className="attendance-list">
+                    {(members.data || []).map((member) => {
+                      const memberId = String(member._id);
+                      const coming = (event.attendeeIds || []).map(String).includes(memberId);
+                      return (
+                        <label className="attendance-member" key={memberId}>
+                          <Checkbox
+                            checked={coming}
+                            onChange={(change) => {
+                              const current = (event.attendeeIds || []).map(String);
+                              const attendeeIds = change.target.checked
+                                ? [...current, memberId]
+                                : current.filter((id) => id !== memberId);
+                              updateEvent.mutate({ id: event._id, data: { attendeeIds } });
+                            }}
+                          />
+                          <span>{memberName(member)}</span>
+                          <small>{coming ? "Coming" : "Not marked"}</small>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </section>
               </article>
             );
           })}
@@ -113,7 +141,7 @@ export function Events() {
         <Form
           layout="vertical"
           requiredMark={false}
-          initialValues={{ tableCount: 5, tableCapacity: 10 }}
+          initialValues={{ tableConfigurations: [{ name: "Table 1", capacity: 10 }] }}
           onFinish={async (values) => {
             await createEvent.mutateAsync({
               ...values,
@@ -136,16 +164,57 @@ export function Events() {
           <Form.Item name="description" label="Description">
             <Input.TextArea rows={3} placeholder="Optional note" />
           </Form.Item>
-          <div className="split">
-            <Form.Item name="tableCount" label="Tables">
-              <InputNumber min={1} className="full" />
-            </Form.Item>
-            <Form.Item name="tableCapacity" label="Seats per table">
-              <InputNumber min={1} className="full" />
-            </Form.Item>
-          </div>
-          <Form.Item name="attendeeIds" label="Guests">
-            <Select mode="multiple" options={memberOptions} optionFilterProp="label" placeholder="Choose members" />
+          <Form.Item label="Tables">
+            <Form.List name="tableConfigurations" initialValue={[{ name: "Table 1", capacity: 10 }]}>
+              {(fields, actions) => (
+                <div className="table-config-list">
+                  {fields.map((field, index) => (
+                    <div className="table-config-row" key={field.key}>
+                      <Form.Item
+                        name={[field.name, "name"]}
+                        label={index === 0 ? "Table name" : undefined}
+                        rules={[{ required: true, message: "Name this table" }]}
+                      >
+                        <Input placeholder={`Table ${index + 1}`} />
+                      </Form.Item>
+                      <Form.Item
+                        name={[field.name, "capacity"]}
+                        label={index === 0 ? "Seats" : undefined}
+                        rules={[{ required: true, message: "Enter seats" }]}
+                      >
+                        <InputNumber min={1} className="full" />
+                      </Form.Item>
+                      {fields.length > 1 ? (
+                        <Button
+                          type="text"
+                          danger
+                          icon={<MinusCircleOutlined />}
+                          aria-label={`Remove table ${index + 1}`}
+                          onClick={() => actions.remove(field.name)}
+                        />
+                      ) : null}
+                    </div>
+                  ))}
+                  <Button
+                    type="dashed"
+                    block
+                    icon={<PlusOutlined />}
+                    onClick={() => actions.add({ name: `Table ${fields.length + 1}`, capacity: 10 })}
+                  >
+                    Add table
+                  </Button>
+                </div>
+              )}
+            </Form.List>
+          </Form.Item>
+          <Form.Item name="attendeeIds" label="Who is coming?">
+            <Checkbox.Group
+              className="attendance-create-list"
+              options={(members.data || []).map((member) => ({
+                label: memberName(member),
+                value: member._id,
+              }))}
+            />
           </Form.Item>
           <Button type="primary" htmlType="submit" loading={createEvent.isPending}>
             Create event

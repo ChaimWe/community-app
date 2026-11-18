@@ -12,7 +12,6 @@ export const memberInput = z.object({
   email: z.string().default(""),
   address: z.string().default(""),
   jewishStatus: z.string().default(""),
-  minyanAttendance: z.string().default(""),
   programs: z.array(z.string()).default([]),
   comments: z.string().default(""),
   comments2: z.string().default(""),

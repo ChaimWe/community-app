@@ -11,7 +11,6 @@ const memberSchema = new Schema(
     email: { type: String, default: "" },
     address: { type: String, default: "" },
     jewishStatus: { type: String, default: "" },
-    minyanAttendance: { type: String, default: "" },
     programs: { type: [String], default: [] },
     comments: { type: String, default: "" },
     comments2: { type: String, default: "" },

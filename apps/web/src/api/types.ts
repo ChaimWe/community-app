@@ -9,7 +9,6 @@ export interface Member {
   email?: string;
   address?: string;
   jewishStatus?: string;
-  minyanAttendance?: string;
   programs?: string[];
   comments?: string;
   comments2?: string;
@@ -26,7 +25,6 @@ export interface MemberInput {
   email?: string;
   address?: string;
   jewishStatus?: string;
-  minyanAttendance?: string;
   programs?: string[];
   comments?: string;
   comments2?: string;
@@ -68,5 +66,6 @@ export interface CommunityEvent {
   attendeeIds?: string[];
   tableCount: number;
   tableCapacity: number;
+  tableConfigurations?: Array<{ name: string; capacity: number }>;
   seatingPlans?: SeatingPlan[];
 }

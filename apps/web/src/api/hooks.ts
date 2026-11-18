@@ -2,10 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./client";
 import { CommunityEvent, Group, Member, MemberInput } from "./types";
 
-export function useMembers(search = "") {
+export function useMembers(search = "", program = "") {
   return useQuery({
-    queryKey: ["members", search],
-    queryFn: async () => (await api.get<Member[]>("/members", { params: { search } })).data,
+    queryKey: ["members", search, program],
+    queryFn: async () => (await api.get<Member[]>("/members", { params: { search, program } })).data,
   });
 }
 
