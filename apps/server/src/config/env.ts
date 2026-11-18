@@ -17,6 +17,12 @@ const schema = z.object({
   MONGODB_URI: z.string().min(1, "MONGODB_URI is required"),
   JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
   APP_URL: z.string().url("APP_URL must be an absolute URL").transform((value) => value.replace(/\/$/, "")),
+  GOOGLE_AUTH_ENABLED: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .default("false")
+    .transform((value) => value === "true"),
   GOOGLE_CLIENT_ID: z.string().default(""),
   GOOGLE_CLIENT_SECRET: z.string().default(""),
   GOOGLE_ALLOWED_EMAILS: z.string().default(""),
@@ -36,15 +42,20 @@ const parsed = result.data;
 const googleAllowedEmails = parsed.GOOGLE_ALLOWED_EMAILS.split(",")
   .map((email) => email.trim().toLowerCase())
   .filter(Boolean);
+const googleAuthEnabled = parsed.GOOGLE_AUTH_ENABLED;
 const problems: string[] = [];
 
 if (parsed.NODE_ENV === "production" && !parsed.APP_URL.startsWith("https://")) {
   problems.push("APP_URL: production must use https://");
 }
-if (parsed.NODE_ENV === "production" && !parsed.GOOGLE_CLIENT_ID) problems.push("GOOGLE_CLIENT_ID is required in production");
-if (parsed.NODE_ENV === "production" && !parsed.GOOGLE_CLIENT_SECRET) problems.push("GOOGLE_CLIENT_SECRET is required in production");
-if (parsed.NODE_ENV === "production" && googleAllowedEmails.length === 0) {
-  problems.push("GOOGLE_ALLOWED_EMAILS is required in production");
+if (parsed.NODE_ENV === "production" && googleAuthEnabled && !parsed.GOOGLE_CLIENT_ID) {
+  problems.push("GOOGLE_CLIENT_ID is required in production when Google auth is enabled");
+}
+if (parsed.NODE_ENV === "production" && googleAuthEnabled && !parsed.GOOGLE_CLIENT_SECRET) {
+  problems.push("GOOGLE_CLIENT_SECRET is required in production when Google auth is enabled");
+}
+if (parsed.NODE_ENV === "production" && googleAuthEnabled && googleAllowedEmails.length === 0) {
+  problems.push("GOOGLE_ALLOWED_EMAILS is required in production when Google auth is enabled");
 }
 if ((parsed.ADMIN_EMAIL && !parsed.ADMIN_PASSWORD) || (!parsed.ADMIN_EMAIL && parsed.ADMIN_PASSWORD)) {
   problems.push("ADMIN_EMAIL and ADMIN_PASSWORD must be set together");
@@ -60,6 +71,7 @@ if (problems.length) {
 export const env = {
   ...parsed,
   googleAllowedEmails,
+  googleAuthEnabled,
   isProduction: parsed.NODE_ENV === "production",
   secureCookies: parsed.APP_URL.startsWith("https://"),
   googleCallbackUrl: `${parsed.APP_URL}/api/auth/google/callback`,
