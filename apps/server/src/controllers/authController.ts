@@ -2,7 +2,7 @@ import { Response } from "express";
 import { env } from "../config/env";
 import { clearAuthCookies, setSessionCookie } from "../lib/cookies";
 import { AuthRequest } from "../middleware/auth";
-import { currentUser, listUsersForAdmin, login, updateUserApproval } from "../services/authService";
+import { changePassword, currentUser, listUsersForAdmin, login, resetUserPassword, updateUserApproval } from "../services/authService";
 import { User } from "../models/User";
 
 export async function loginController(req: AuthRequest, res: Response) {
@@ -83,6 +83,33 @@ export async function createPendingUserController(req: AuthRequest, res: Respons
     approved: user.approved,
     permission: user.permission,
   });
+}
+
+export async function changePasswordController(req: AuthRequest, res: Response) {
+  const currentPassword = String(req.body?.currentPassword || "");
+  const newPassword = String(req.body?.newPassword || "");
+  const confirmPassword = String(req.body?.confirmPassword || "");
+
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    return res.status(400).json({ message: "Current password and both new-password fields are required" });
+  }
+  if (newPassword !== confirmPassword) {
+    return res.status(400).json({ message: "New passwords do not match" });
+  }
+
+  await changePassword(req.userId || "", currentPassword, newPassword);
+  res.json({ ok: true });
+}
+
+export async function resetPasswordController(req: AuthRequest, res: Response) {
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const temporaryPassword = String(req.body?.temporaryPassword || "");
+  if (!temporaryPassword) {
+    return res.status(400).json({ message: "Temporary password is required" });
+  }
+
+  await resetUserPassword(id, temporaryPassword);
+  res.json({ ok: true });
 }
 
 // Google auth is temporarily disabled. The app now requires admin approval for manual email sign-in.

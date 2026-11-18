@@ -9,6 +9,7 @@ const schema = new Schema(
     isAdmin: { type: Boolean, default: false },
     approved: { type: Boolean, default: false },
     permission: { type: String, enum: ["view", "edit"], default: "view" },
+    mustChangePassword: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

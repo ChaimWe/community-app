@@ -69,3 +69,32 @@ export async function updateUserApproval(userId: string, input: { approved?: boo
   await user.save();
   return user;
 }
+
+export async function changePassword(userId: string, currentPassword: string, newPassword: string) {
+  if (newPassword.length < 8) {
+    throw Object.assign(new Error("New password must be at least 8 characters"), { status: 400 });
+  }
+
+  const user = await User.findById(userId);
+  if (!user) throw Object.assign(new Error("User not found"), { status: 404 });
+  if (!user.passwordHash || !(await bcrypt.compare(currentPassword, user.passwordHash))) {
+    throw Object.assign(new Error("Current password is incorrect"), { status: 400 });
+  }
+
+  user.passwordHash = await bcrypt.hash(newPassword, 12);
+  user.mustChangePassword = false;
+  await user.save();
+}
+
+export async function resetUserPassword(userId: string, temporaryPassword: string) {
+  if (temporaryPassword.length < 8) {
+    throw Object.assign(new Error("Temporary password must be at least 8 characters"), { status: 400 });
+  }
+
+  const user = await User.findById(userId);
+  if (!user) throw Object.assign(new Error("User not found"), { status: 404 });
+
+  user.passwordHash = await bcrypt.hash(temporaryPassword, 12);
+  user.mustChangePassword = true;
+  await user.save();
+}

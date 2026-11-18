@@ -13,6 +13,8 @@ export interface Member {
   comments?: string;
   comments2?: string;
   documentLocation?: string;
+  archived?: boolean;
+  archivedAt?: string;
 }
 
 export interface MemberInput {
@@ -29,6 +31,7 @@ export interface MemberInput {
   comments?: string;
   comments2?: string;
   documentLocation?: string;
+  archived?: boolean;
 }
 
 export interface Group {

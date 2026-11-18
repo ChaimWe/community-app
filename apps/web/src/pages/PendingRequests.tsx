@@ -1,4 +1,4 @@
-import { Alert, Button, Popconfirm, Select, Table, Tag, message } from "antd";
+import { Alert, Button, Input, Modal, Popconfirm, Select, Table, Tag, message } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
@@ -16,6 +16,10 @@ interface AppUser {
 export function PendingRequests() {
   const queryClient = useQueryClient();
   const [pendingPermissions, setPendingPermissions] = useState<Record<string, "view" | "edit">>({});
+  const [temporaryPassword, setTemporaryPassword] = useState("");
+  const [tempPasswordModal, setTempPasswordModal] = useState<{ visible: boolean; user?: AppUser }>({
+    visible: false,
+  });
   const users = useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => (await api.get<AppUser[]>("/auth/users")).data,
@@ -27,6 +31,20 @@ export function PendingRequests() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       message.success("User access updated");
+    },
+  });
+
+  const setTempPassword = useMutation({
+    mutationFn: ({ id, password }: { id: string; password: string }) =>
+      api.patch(`/auth/users/${id}/password`, { temporaryPassword: password }),
+    onSuccess: () => {
+      message.success("Temporary password set; the user must change it after signing in");
+      setTempPasswordModal({ visible: false });
+      setTemporaryPassword("");
+    },
+    onError: (error: unknown) => {
+      const caught = error as { response?: { data?: { message?: string } } };
+      message.error(caught.response?.data?.message || "Could not reset password");
     },
   });
 
@@ -139,20 +157,56 @@ export function PendingRequests() {
               title: "Action",
               render: (_, user) =>
                 user.isAdmin ? null : (
-                  <Popconfirm
-                    title="Revoke access?"
-                    description="This user will no longer be able to sign in."
-                    okText="Revoke"
-                    okButtonProps={{ danger: true }}
-                    onConfirm={() => update.mutate({ id: user.id, approved: false, permission: "view" })}
-                  >
-                    <Button danger>Revoke access</Button>
-                  </Popconfirm>
+                  <>
+                    <Popconfirm
+                      title="Revoke access?"
+                      description="This user will no longer be able to sign in."
+                      okText="Revoke"
+                      okButtonProps={{ danger: true }}
+                      onConfirm={() => update.mutate({ id: user.id, approved: false, permission: "view" })}
+                    >
+                      <Button danger>Revoke access</Button>
+                    </Popconfirm>
+                    <Button
+                      style={{ marginLeft: 8 }}
+                      onClick={() => setTempPasswordModal({ visible: true, user })}
+                    >
+                      Set temp password
+                    </Button>
+                  </>
                 ),
             },
           ]}
         />
       </div>
+
+      <Modal
+        title="Set temporary password"
+        open={tempPasswordModal.visible}
+        onCancel={() => setTempPasswordModal({ visible: false })}
+        footer={null}
+      >
+        <p>
+          Enter a temporary password. Share it securely with the user; they will be required to change it after signing in.
+        </p>
+        <Input.Password
+          placeholder="Enter temporary password"
+          onChange={(e) => setTemporaryPassword(e.target.value)}
+        />
+        <div style={{ marginTop: 16, textAlign: "right" }}>
+          <Button
+            onClick={() => {
+              if (tempPasswordModal.user) {
+                setTempPassword.mutate({ id: tempPasswordModal.user.id, password: temporaryPassword });
+              }
+            }}
+            type="primary"
+            loading={setTempPassword.isPending}
+          >
+            Set password
+          </Button>
+        </div>
+      </Modal>
     </section>
   );
 }

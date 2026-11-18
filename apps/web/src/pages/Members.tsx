@@ -1,25 +1,47 @@
-import { Button, Input, Modal, Select, Table, Tag, message } from "antd";
+import { Button, Input, Modal, Popconfirm, Select, Switch, Table, Tag, message } from "antd";
 import { useEffect, useState } from "react";
-import { useCreateMember, useMembers } from "../api/hooks";
+import {
+  useArchiveMember,
+  useCreateMember,
+  useDeleteMember,
+  useMember,
+  useMembers,
+  useRestoreMember,
+  useUpdateMember,
+} from "../api/hooks";
 import { Member } from "../api/types";
 import { PageHeader } from "../components/PageHeader";
-import { MemberDrawer } from "../features/members/MemberDrawer";
 import { MemberForm } from "../features/members/MemberForm";
-import { PROGRAM_OPTIONS } from "../lib/labels";
+import { PROGRAM_OPTIONS, memberName } from "../lib/labels";
+import { useSession } from "../api/session";
 
 export function Members() {
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
   const [program, setProgram] = useState("");
   const [memberId, setMemberId] = useState<string>();
-  const [open, setOpen] = useState(false);
-  const members = useMembers(search, program);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [includeArchived, setIncludeArchived] = useState(false);
+  const members = useMembers(search, program, includeArchived);
+  const selectedMember = useMember(memberId);
   const createMember = useCreateMember();
+  const updateMember = useUpdateMember();
+  const archiveMember = useArchiveMember();
+  const restoreMember = useRestoreMember();
+  const deleteMember = useDeleteMember();
+  const session = useSession();
+  const readOnly = !session.data?.isAdmin && session.data?.permission !== "edit";
 
   useEffect(() => {
     const timer = window.setTimeout(() => setSearch(query.trim()), 250);
     return () => window.clearTimeout(timer);
   }, [query]);
+
+  function openMember(member: Member) {
+    setMemberId(member._id);
+    setEditOpen(true);
+  }
 
   return (
     <section className="page">
@@ -27,11 +49,11 @@ export function Members() {
         eyebrow="Directory"
         title="Members"
         text="Search by name, phone, email, or program. Open a row to edit the record."
-        action={
-          <Button type="primary" onClick={() => setOpen(true)}>
+        action={!readOnly ? (
+          <Button type="primary" onClick={() => setCreateOpen(true)}>
             Add member
           </Button>
-        }
+        ) : null}
       />
       <div className="member-tools">
         <Input.Search
@@ -49,6 +71,13 @@ export function Members() {
           onChange={(value) => setProgram(value || "")}
           options={PROGRAM_OPTIONS.map((value) => ({ value, label: value }))}
         />
+        <span className="archived-toggle">
+          <span className="label">Include archived members</span>
+          <Switch
+            checked={includeArchived}
+            onChange={(checked) => setIncludeArchived(checked)}
+          />
+        </span>
       </div>
       <div className="panel table-panel">
         <Table<Member>
@@ -56,7 +85,7 @@ export function Members() {
           loading={members.isLoading}
           dataSource={members.data || []}
           pagination={{ pageSize: 12, hideOnSinglePage: true }}
-          onRow={(record) => ({ onClick: () => setMemberId(record._id), style: { cursor: "pointer" } })}
+          onRow={(record) => ({ onClick: () => openMember(record), style: { cursor: "pointer" } })}
           locale={{ emptyText: search || program ? "No members match that filter." : "No members yet." }}
           columns={[
             { title: "Surname", dataIndex: "surname", sorter: (a, b) => (a.surname || "").localeCompare(b.surname || "") },
@@ -73,15 +102,96 @@ export function Members() {
           ]}
         />
       </div>
-      <MemberDrawer id={memberId} onClose={() => setMemberId(undefined)} />
-      <Modal title="New member" open={open} footer={null} onCancel={() => setOpen(false)} destroyOnClose width={640}>
+
+      <Modal
+        title="New member"
+        open={createOpen}
+        footer={null}
+        onCancel={() => setCreateOpen(false)}
+        destroyOnClose
+        width={640}
+      >
         <MemberForm
           onSubmit={async (data) => {
             await createMember.mutateAsync(data);
             message.success("Member created");
-            setOpen(false);
+            setCreateOpen(false);
           }}
         />
+      </Modal>
+
+      <Modal
+        title={selectedMember.data ? memberName(selectedMember.data) : "Member details"}
+        open={editOpen}
+        footer={null}
+        onCancel={() => {
+          setEditOpen(false);
+          setMemberId(undefined);
+        }}
+        destroyOnClose
+        width={640}
+      >
+        {selectedMember.isLoading ? <p>Loading member...</p> : null}
+        {selectedMember.data ? (
+          <>
+            <MemberForm
+              initial={selectedMember.data}
+              readOnly={readOnly}
+              onSubmit={async (data) => {
+                await updateMember.mutateAsync({ id: memberId!, data });
+                message.success("Member updated");
+                setEditOpen(false);
+                setMemberId(undefined);
+              }}
+            />
+            {!readOnly ? (
+              <div className="member-lifecycle-actions">
+                {selectedMember.data.archived ? (
+                  <Popconfirm
+                    title="Restore this member?"
+                    onConfirm={async () => {
+                      await restoreMember.mutateAsync(memberId!);
+                      message.success("Member restored");
+                      setEditOpen(false);
+                      setMemberId(undefined);
+                    }}
+                  >
+                    <Button>Restore member</Button>
+                  </Popconfirm>
+                ) : (
+                  <Popconfirm
+                    title="Archive this member?"
+                    description="The member will leave the active directory."
+                    onConfirm={async () => {
+                      await archiveMember.mutateAsync(memberId!);
+                      message.success("Member archived");
+                      setEditOpen(false);
+                      setMemberId(undefined);
+                    }}
+                  >
+                    <Button>Archive member</Button>
+                  </Popconfirm>
+                )}
+                {session.data?.isAdmin ? (
+                  <Popconfirm
+                    title="Permanently delete this member?"
+                    description="This cannot be undone."
+                    okText="Delete permanently"
+                    okButtonProps={{ danger: true }}
+                    onConfirm={async () => {
+                      await deleteMember.mutateAsync(memberId!);
+                      message.success("Member permanently deleted");
+                      setEditOpen(false);
+                      setMemberId(undefined);
+                    }}
+                  >
+                    <Button danger>Delete permanently</Button>
+                  </Popconfirm>
+                ) : null}
+              </div>
+            ) : null}
+          </>
+        ) : null}
       </Modal>
     </section>
   );

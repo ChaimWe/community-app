@@ -2,10 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./client";
 import { CommunityEvent, Group, Member, MemberInput } from "./types";
 
-export function useMembers(search = "", program = "") {
+export function useMembers(search = "", program = "", includeArchived = false) {
   return useQuery({
-    queryKey: ["members", search, program],
-    queryFn: async () => (await api.get<Member[]>("/members", { params: { search, program } })).data,
+    queryKey: ["members", search, program, includeArchived],
+    queryFn: async () => (await api.get<Member[]>("/members", { params: { search, program, includeArchived } })).data,
   });
 }
 
@@ -79,5 +79,38 @@ export function useGenerateSeating() {
   return useMutation({
     mutationFn: (id: string) => api.post(`/events/${id}/seating/generate`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["events"] }),
+  });
+}
+
+export function useArchiveMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.patch(`/members/${id}/archive`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["members"] });
+      queryClient.invalidateQueries({ queryKey: ["member"] });
+    },
+  });
+}
+
+export function useRestoreMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.patch(`/members/${id}/restore`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["members"] });
+      queryClient.invalidateQueries({ queryKey: ["member"] });
+    },
+  });
+}
+
+export function useDeleteMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/members/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["members"] });
+      queryClient.invalidateQueries({ queryKey: ["member"] });
+    },
   });
 }

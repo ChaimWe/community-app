@@ -15,6 +15,8 @@ const memberSchema = new Schema(
     comments: { type: String, default: "" },
     comments2: { type: String, default: "" },
     documentLocation: { type: String, default: "" },
+    archived: { type: Boolean, default: false },
+    archivedAt: { type: Date, default: null },
     familyId: { type: Schema.Types.ObjectId, ref: "Family", default: null },
     spouseId: { type: Schema.Types.ObjectId, ref: "Member", default: null },
     parentIds: { type: [Schema.Types.ObjectId], ref: "Member", default: [] },

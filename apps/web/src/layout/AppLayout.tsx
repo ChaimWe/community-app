@@ -1,14 +1,16 @@
 import {
-  DashboardOutlined,
-  TeamOutlined,
   ApartmentOutlined,
   CalendarOutlined,
+  CloseOutlined,
+  DashboardOutlined,
+  KeyOutlined,
   LogoutOutlined,
   MenuOutlined,
-  CloseOutlined,
+  TeamOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Button, Form, Input, Modal, message } from "antd";
 import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
@@ -26,11 +28,24 @@ export function AppLayout() {
   const queryClient = useQueryClient();
   const session = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const logout = useMutation({
     mutationFn: () => api.post("/auth/logout"),
     onSettled: async () => {
       queryClient.clear();
       navigate("/login");
+    },
+  });
+  const changePassword = useMutation({
+    mutationFn: (values: { currentPassword: string; newPassword: string; confirmPassword: string }) =>
+      api.patch("/auth/password", values),
+    onSuccess: () => {
+      message.success("Password changed");
+      setPasswordOpen(false);
+    },
+    onError: (error: unknown) => {
+      const caught = error as { response?: { data?: { message?: string } } };
+      message.error(caught.response?.data?.message || "Could not change password");
     },
   });
 
@@ -71,6 +86,10 @@ export function AppLayout() {
             <strong>{session.data?.name || "Signed in"}</strong>
             <small>{session.data?.email}</small>
           </div>
+          <button type="button" className="sign-out" onClick={() => setPasswordOpen(true)}>
+            <KeyOutlined />
+            Change password
+          </button>
           <button
             type="button"
             className="sign-out"
@@ -82,9 +101,34 @@ export function AppLayout() {
           </button>
         </div>
       </aside>
-      <main className="stage">
-        <Outlet />
-      </main>
+      <main className="stage"><Outlet /></main>
+
+      <Modal
+        title="Change password"
+        open={passwordOpen}
+        footer={null}
+        onCancel={() => setPasswordOpen(false)}
+        destroyOnClose
+      >
+        <Form
+          layout="vertical"
+          requiredMark={false}
+          onFinish={(values) => changePassword.mutate(values)}
+        >
+          <Form.Item name="currentPassword" label="Current password" rules={[{ required: true }]}>
+            <Input.Password autoComplete="current-password" />
+          </Form.Item>
+          <Form.Item name="newPassword" label="New password" rules={[{ required: true, min: 8 }]}>
+            <Input.Password autoComplete="new-password" />
+          </Form.Item>
+          <Form.Item name="confirmPassword" label="Confirm new password" rules={[{ required: true }]}>
+            <Input.Password autoComplete="new-password" />
+          </Form.Item>
+          <Button type="primary" htmlType="submit" block loading={changePassword.isPending}>
+            Change password
+          </Button>
+        </Form>
+      </Modal>
     </div>
   );
 }

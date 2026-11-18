@@ -1,7 +1,10 @@
 import { Member } from "../models/Member";
 
-function searchFilter(search: string, program = "") {
+function searchFilter(search: string, program = "", includeArchived = false) {
   const filters: Record<string, unknown>[] = [];
+  if (!includeArchived) {
+    filters.push({ archived: { $ne: true } });
+  }
 
   if (search) {
     const pattern = { $regex: search, $options: "i" };
@@ -20,11 +23,11 @@ function searchFilter(search: string, program = "") {
     filters.push({ programs: program });
   }
 
-  return filters.length ? { $and: filters } : {};
+  return { $and: filters };
 }
 
-export async function listMembers(search = "", program = "") {
-  return Member.find(searchFilter(search, program)).sort({ surname: 1, firstName: 1 }).limit(1000);
+export async function listMembers(search = "", program = "", includeArchived = false) {
+  return Member.find(searchFilter(search, program, includeArchived)).sort({ surname: 1, firstName: 1 }).limit(1000);
 }
 
 export async function getMember(id: string) {
@@ -37,6 +40,14 @@ export async function createMember(data: Record<string, unknown>) {
 
 export async function updateMember(id: string, data: Record<string, unknown>) {
   return Member.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+}
+
+export async function archiveMember(id: string) {
+  return Member.findByIdAndUpdate(id, { archived: true, archivedAt: new Date() }, { new: true });
+}
+
+export async function restoreMember(id: string) {
+  return Member.findByIdAndUpdate(id, { archived: false, archivedAt: null }, { new: true });
 }
 
 export async function deleteMember(id: string) {
