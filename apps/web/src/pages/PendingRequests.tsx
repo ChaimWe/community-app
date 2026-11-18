@@ -1,4 +1,4 @@
-import { Alert, Button, Select, Table, Tag, message } from "antd";
+import { Alert, Button, Popconfirm, Select, Table, Tag, message } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
@@ -15,7 +15,7 @@ interface AppUser {
 
 export function PendingRequests() {
   const queryClient = useQueryClient();
-  const [permissions, setPermissions] = useState<Record<string, "view" | "edit">>({});
+  const [pendingPermissions, setPendingPermissions] = useState<Record<string, "view" | "edit">>({});
   const users = useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => (await api.get<AppUser[]>("/auth/users")).data,
@@ -31,16 +31,22 @@ export function PendingRequests() {
   });
 
   const pending = (users.data || []).filter((user) => !user.approved && !user.isAdmin);
+  const currentUsers = (users.data || []).filter((user) => user.approved);
 
   return (
     <section className="page">
       <PageHeader
         eyebrow="Administration"
-        title="Pending requests"
-        text="Approve first-time accounts and choose view-only or editing access."
+        title="User access"
+        text="Review pending requests and manage approved users and permissions."
       />
-      {users.isError ? <Alert type="error" message="Could not load pending requests" /> : null}
-      <div className="panel table-panel">
+      {users.isError ? <Alert type="error" message="Could not load users" /> : null}
+
+      <div className="panel table-panel" style={{ marginBottom: 20 }}>
+        <div className="panel-head" style={{ padding: "8px 8px 14px" }}>
+          <h2>Pending requests</h2>
+          <span className="muted">{pending.length}</span>
+        </div>
         <Table<AppUser>
           rowKey="id"
           loading={users.isLoading}
@@ -55,13 +61,13 @@ export function PendingRequests() {
               title: "Permission",
               render: (_, user) => (
                 <Select
-                  value={permissions[user.id] || user.permission}
+                  value={pendingPermissions[user.id] || user.permission}
                   style={{ width: 150 }}
                   options={[
                     { value: "view", label: "View only" },
                     { value: "edit", label: "Can edit" },
                   ]}
-                  onChange={(permission) => setPermissions((current) => ({ ...current, [user.id]: permission }))}
+                  onChange={(permission) => setPendingPermissions((current) => ({ ...current, [user.id]: permission }))}
                 />
               ),
             },
@@ -75,13 +81,74 @@ export function PendingRequests() {
                     update.mutate({
                       id: user.id,
                       approved: true,
-                      permission: permissions[user.id] || user.permission,
+                      permission: pendingPermissions[user.id] || user.permission,
                     })
                   }
                 >
                   Approve
                 </Button>
               ),
+            },
+          ]}
+        />
+      </div>
+
+      <div className="panel table-panel">
+        <div className="panel-head" style={{ padding: "8px 8px 14px" }}>
+          <h2>Current users</h2>
+          <span className="muted">{currentUsers.length}</span>
+        </div>
+        <Table<AppUser>
+          rowKey="id"
+          loading={users.isLoading}
+          dataSource={currentUsers}
+          pagination={{ pageSize: 12, hideOnSinglePage: true }}
+          locale={{ emptyText: "There are no approved users." }}
+          columns={[
+            { title: "Name", dataIndex: "name", render: (value) => value || "—" },
+            { title: "Email", dataIndex: "email" },
+            {
+              title: "Role",
+              render: (_, user) =>
+                user.isAdmin ? <Tag color="purple">Admin</Tag> : <Tag color="green">Approved</Tag>,
+            },
+            {
+              title: "Permission",
+              render: (_, user) =>
+                user.isAdmin ? (
+                  <span>Full access</span>
+                ) : (
+                  <Select
+                    value={user.permission}
+                    style={{ width: 150 }}
+                    options={[
+                      { value: "view", label: "View only" },
+                      { value: "edit", label: "Can edit" },
+                    ]}
+                    onChange={(permission) =>
+                      update.mutate({
+                        id: user.id,
+                        approved: true,
+                        permission,
+                      })
+                    }
+                  />
+                ),
+            },
+            {
+              title: "Action",
+              render: (_, user) =>
+                user.isAdmin ? null : (
+                  <Popconfirm
+                    title="Revoke access?"
+                    description="This user will no longer be able to sign in."
+                    okText="Revoke"
+                    okButtonProps={{ danger: true }}
+                    onConfirm={() => update.mutate({ id: user.id, approved: false, permission: "view" })}
+                  >
+                    <Button danger>Revoke access</Button>
+                  </Popconfirm>
+                ),
             },
           ]}
         />
