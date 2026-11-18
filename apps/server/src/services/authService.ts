@@ -5,25 +5,21 @@ import { env } from "../config/env";
 
 export async function login(email: string, password: string) {
   const user = await User.findOne({ email: email.toLowerCase() });
-  if (!user?.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
+  if (!user) {
     throw Object.assign(new Error("Invalid email or password"), { status: 401 });
+  }
+  if (!user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
+    throw Object.assign(new Error("Invalid email or password"), { status: 401 });
+  }
+  if (!user.approved) {
+    throw Object.assign(new Error("Your account is pending admin approval"), { status: 403 });
   }
   return signToken(user.id);
 }
 
-export async function loginWithGoogle(profile: { googleId: string; email: string; name: string }) {
-  const email = profile.email.toLowerCase();
-  if (env.googleAllowedEmails.length && !env.googleAllowedEmails.includes(email)) {
-    throw Object.assign(new Error("This Google account is not allowed to sign in"), { status: 403 });
-  }
-
-  const user = await User.findOneAndUpdate(
-    { $or: [{ googleId: profile.googleId }, { email }] },
-    { $set: { googleId: profile.googleId, email, name: profile.name || "" } },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
-  );
-  if (!user) throw Object.assign(new Error("Could not save the Google account"), { status: 500 });
-  return signToken(user.id);
+// Google auth is temporarily disabled. Admin approval is the required sign-in flow.
+export async function loginWithGoogle(_profile: { googleId: string; email: string; name: string }) {
+  throw Object.assign(new Error("Google sign-in is temporarily disabled"), { status: 403 });
 }
 
 function signToken(userId: string) {
@@ -32,13 +28,44 @@ function signToken(userId: string) {
 
 export async function currentUser(userId: string) {
   if (!userId) return null;
-  return User.findById(userId).select("name email");
+  return User.findById(userId).select("name email approved permission isAdmin");
 }
 
 export async function seedAdmin() {
   if (!env.ADMIN_EMAIL || !env.ADMIN_PASSWORD) return;
-  if (await User.exists({ email: env.ADMIN_EMAIL.toLowerCase() })) return;
+  const adminEmail = env.ADMIN_EMAIL.toLowerCase();
+  const existingAdmin = await User.findOne({ email: adminEmail });
+  if (existingAdmin) {
+    existingAdmin.isAdmin = true;
+    existingAdmin.approved = true;
+    existingAdmin.permission = "edit";
+    await existingAdmin.save();
+    return;
+  }
+
   const passwordHash = await bcrypt.hash(env.ADMIN_PASSWORD, 12);
-  await User.create({ email: env.ADMIN_EMAIL, passwordHash, name: "Administrator" });
-  console.log(`Created password admin ${env.ADMIN_EMAIL}`);
+  await User.create({
+    email: adminEmail,
+    passwordHash,
+    name: "Administrator",
+    isAdmin: true,
+    approved: true,
+    permission: "edit",
+  });
+  console.log(`Created password admin ${adminEmail}`);
+}
+
+export async function listUsersForAdmin() {
+  return User.find({}).select("name email approved permission isAdmin createdAt updatedAt").sort({ createdAt: -1 });
+}
+
+export async function updateUserApproval(userId: string, input: { approved?: boolean; permission?: "view" | "edit" }) {
+  const user = await User.findById(userId);
+  if (!user) throw Object.assign(new Error("User not found"), { status: 404 });
+
+  if (typeof input.approved === "boolean") user.approved = input.approved;
+  if (input.permission === "view" || input.permission === "edit") user.permission = input.permission;
+  if (user.approved === false) user.permission = "view";
+  await user.save();
+  return user;
 }

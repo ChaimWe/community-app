@@ -49,12 +49,8 @@ export function Login() {
         <div>
           <p className="eyebrow">Admin sign in</p>
           <h2>Welcome back</h2>
-          <p className="lede">Use the Google account that was approved for this workspace.</p>
+          <p className="lede">Use an approved email account. Google sign-in is temporarily disabled.</p>
           {error ? <div className="banner">{error}</div> : null}
-          <a className="google-btn" href="/api/auth/google">
-            <GoogleMark />
-            Continue with Google
-          </a>
           <button type="button" className="text-link email-toggle" onClick={() => setEmailOpen((open) => !open)}>
             {emailOpen ? "Hide email sign in" : "Sign in with email instead"}
           </button>

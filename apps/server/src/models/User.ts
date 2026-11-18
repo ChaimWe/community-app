@@ -6,6 +6,9 @@ const schema = new Schema(
     passwordHash: { type: String, default: "" },
     googleId: { type: String },
     name: { type: String, default: "" },
+    isAdmin: { type: Boolean, default: false },
+    approved: { type: Boolean, default: false },
+    permission: { type: String, enum: ["view", "edit"], default: "view" },
   },
   { timestamps: true },
 );

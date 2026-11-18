@@ -4,8 +4,11 @@ import {
   ApartmentOutlined,
   CalendarOutlined,
   LogoutOutlined,
+  MenuOutlined,
+  CloseOutlined,
 } from "@ant-design/icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { useSession } from "../api/session";
@@ -21,6 +24,7 @@ export function AppLayout() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const session = useSession();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const logout = useMutation({
     mutationFn: () => api.post("/auth/logout"),
     onSettled: async () => {
@@ -31,17 +35,27 @@ export function AppLayout() {
 
   return (
     <div className="shell">
-      <aside className="nav">
-        <div className="brand">
-          <span className="mark">C</span>
-          <span>
-            <strong>CommunityApp</strong>
-            <small>Admin workspace</small>
-          </span>
+      <aside className={`nav ${mobileMenuOpen ? "open" : ""}`}>
+        <div className="nav-topbar">
+          <div className="brand">
+            <span className="mark">C</span>
+            <span>
+              <strong>CommunityApp</strong>
+              <small>Admin workspace</small>
+            </span>
+          </div>
+          <button
+            type="button"
+            className="mobile-nav-toggle"
+            onClick={() => setMobileMenuOpen((open) => !open)}
+            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+          >
+            {mobileMenuOpen ? <CloseOutlined /> : <MenuOutlined />}
+          </button>
         </div>
         <nav>
           {links.map((link) => (
-            <NavLink key={link.to} to={link.to} end={link.to === "/"}>
+            <NavLink key={link.to} to={link.to} end={link.to === "/"} onClick={() => setMobileMenuOpen(false)}>
               {link.icon}
               {link.label}
             </NavLink>

@@ -8,10 +8,12 @@
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; }
+html { font-size: 16px; }
+body { margin: 0; min-height: 100vh; background: #f3efe7; }
 button, input, textarea { font-family: inherit; }
 h1, h2, h3 { font-family: "Fraunces", Georgia, serif; font-weight: 560; letter-spacing: -0.03em; }
 p { margin: 0; }
+a { -webkit-tap-highlight-color: transparent; }
 
 .mark {
   display: grid;
@@ -112,9 +114,29 @@ p { margin: 0; }
   backdrop-filter: blur(10px);
 }
 
+.nav-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .brand { display: flex; align-items: center; gap: 12px; padding: 0 8px; }
 .brand strong { display: block; font-size: 15px; }
 .brand small { color: #6d655d; }
+
+.mobile-nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #e6ddd0;
+  border-radius: 10px;
+  background: #fff;
+  color: #143f3b;
+  cursor: pointer;
+}
 
 .nav nav { display: flex; flex-direction: column; gap: 4px; }
 .nav a, .sign-out {
@@ -247,24 +269,100 @@ p { margin: 0; }
 .ant-drawer-title { font-family: "Fraunces", Georgia, serif; font-size: 28px; }
 
 @media (max-width: 900px) {
-  .login, .shell { grid-template-columns: 1fr; }
-  .login-panel { min-height: 280px; }
-  .login-panel h1 { font-size: 40px; }
+  .login {
+    grid-template-columns: 1fr;
+  }
+
+  .login-panel {
+    min-height: 240px;
+    padding: 24px 20px 28px;
+  }
+
+  .login-panel h1 {
+    max-width: 100%;
+    font-size: clamp(32px, 9vw, 52px);
+  }
+
+  .login-panel p {
+    font-size: 16px;
+  }
+
+  .login-form {
+    padding: 24px 18px 32px;
+  }
+
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
   .nav {
     position: sticky;
-    z-index: 5;
+    top: 0;
+    z-index: 10;
     height: auto;
-    flex-direction: row;
-    align-items: center;
-    overflow-x: auto;
+    padding: 12px 14px;
+    border-right: 0;
+    border-bottom: 1px solid #e6ddd0;
+    gap: 12px;
   }
-  .nav nav { flex-direction: row; }
+
+  .nav nav {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .nav.open nav {
+    display: flex;
+  }
+
+  .nav a, .sign-out {
+    white-space: nowrap;
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+
+  .brand strong { font-size: 13px; }
   .account { margin-top: 0; padding: 0; }
   .account strong, .account small, .brand small { display: none; }
-  .sign-out { width: auto; margin-top: 0; white-space: nowrap; }
-  .page { padding: 24px 16px 48px; }
+  .sign-out { width: auto; margin-top: 0; }
+  .mobile-nav-toggle { display: inline-flex; }
+
+  .page {
+    padding: 24px 16px 48px;
+  }
+
   .page-header, .plan-empty, .agenda li, .split { display: block; }
   .page-header h1 { font-size: 36px; }
   .stat-grid { grid-template-columns: 1fr; }
   .page-header .ant-btn, .plan-empty .ant-btn { margin-top: 12px; }
+}
+
+@media (max-width: 560px) {
+  .login-form h2 {
+    font-size: 30px;
+  }
+
+  .login-form > div {
+    width: 100%;
+  }
+
+  .login-panel {
+    padding: 20px 16px 24px;
+  }
+
+  .page-header h1 {
+    font-size: 30px;
+  }
+
+  .nav {
+    gap: 8px;
+    padding-inline: 10px;
+  }
+
+  .nav a, .sign-out {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
 }
