@@ -70,7 +70,37 @@ export function useUpdateEvent() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<CommunityEvent> }) => api.patch(`/events/${id}`, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["events"] }),
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: ["events"] });
+      const previousEvents = queryClient.getQueriesData<CommunityEvent[]>({ queryKey: ["events"] });
+
+      queryClient.setQueriesData<CommunityEvent[]>({ queryKey: ["events"] }, (currentEvents) =>
+        currentEvents?.map((event) => {
+          if (event._id !== id) return event;
+
+          const updated = { ...event, ...data };
+          if (Array.isArray(data.attendeeIds)) {
+            const attendeeIds = new Set(data.attendeeIds.map(String));
+            updated.seatingPlans = event.seatingPlans?.map((plan) => ({
+              ...plan,
+              tables: plan.tables.map((table) => ({
+                ...table,
+                memberIds: table.memberIds.filter((memberId) => attendeeIds.has(String(memberId))),
+              })),
+            }));
+          }
+          return updated;
+        }),
+      );
+
+      return { previousEvents };
+    },
+    onError: (_error, _variables, context) => {
+      context?.previousEvents.forEach(([queryKey, events]) => {
+        queryClient.setQueryData(queryKey, events);
+      });
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["events"] }),
   });
 }
 

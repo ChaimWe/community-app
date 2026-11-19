@@ -3,7 +3,16 @@ import path from "node:path";
 import { connectDatabase } from "../config/database";
 import { Member } from "../models/Member";
 
-const file = path.resolve(process.cwd(), "data/members.json");
+const candidates = [
+  path.resolve(process.cwd(), "data/members.json"),
+  path.resolve(process.cwd(), "../../data/members.json"),
+  path.resolve(__dirname, "../../../../data/members.json"),
+];
+const file: string = candidates.find((candidate) => fs.existsSync(candidate)) as string;
+
+if (!file) {
+  throw new Error(`members.json not found. Checked: ${candidates.join(" | ")}`);
+}
 
 type ImportedMember = {
   firstName?: string;
