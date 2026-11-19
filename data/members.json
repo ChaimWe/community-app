@@ -21,6 +21,71 @@
     "email": "etw487@gmail.com"
   },
   {
+    "birthday": "50",
+    "fatherName": "",
+    "address": "",
+    "comments": "Yes",
+    "gender": "FEMALE",
+    "telephone": "380985647811",
+    "documentLocation": "",
+    "minyanAttendance": "",
+    "secondFamily": "",
+    "firstName": "Лея",
+    "lastUpdated": "2026-11-16T17:10:00.000",
+    "jewishStatus": "HALACHICALLY_JEWISH",
+    "surname": "Малахова",
+    "programs": [
+      "middle women's club"
+    ],
+    "family": "Малахова",
+    "comments2": "",
+    "email": ""
+  },
+  {
+    "birthday": "19",
+    "fatherName": "",
+    "address": "",
+    "comments": "Yes",
+    "gender": "FEMALE",
+    "telephone": "380634850849",
+    "documentLocation": "",
+    "minyanAttendance": "",
+    "secondFamily": "",
+    "firstName": "Анна",
+    "lastUpdated": "2026-11-16T17:11:00.000",
+    "jewishStatus": "HALACHICALLY_JEWISH",
+    "surname": "Савицька",
+    "programs": [
+      "Young adults"
+    ],
+    "family": "Савицька",
+    "comments2": "",
+    "email": ""
+  },
+  {
+    "birthday": "25",
+    "fatherName": "",
+    "address": "",
+    "comments": "Yes",
+    "gender": "FEMALE",
+    "telephone": "380988815046",
+    "documentLocation": "",
+    "minyanAttendance": "",
+    "secondFamily": "",
+    "firstName": "Софія",
+    "lastUpdated": "2026-11-16T17:11:00.000",
+    "jewishStatus": "HALACHICALLY_JEWISH",
+    "surname": "Савицька",
+    "programs": [
+      "Young adults",
+      "women's club"
+    ],
+    "family": "Савицька",
+    "comments2": "",
+    "email": ""
+  },
+
+  {
     "birthday": "",
     "fatherName": "",
     "address": "",

@@ -25,6 +25,7 @@ export function SeatingMap({
   const [saving, setSaving] = useState(false);
   const [guestSearch, setGuestSearch] = useState("");
   const [programFilter, setProgramFilter] = useState("");
+  const [selectedGuest, setSelectedGuest] = useState<{ id: string; from: number | null } | null>(null);
   const names = useMemo(() => new Map(members.map((member) => [member._id, memberName(member)])), [members]);
 
   useEffect(() => {
@@ -84,6 +85,33 @@ export function SeatingMap({
     setDragged(null);
   }
 
+  function moveSelectedGuest(to: number | null) {
+    if (!selectedGuest) return;
+
+    const next = tables.map((table) => ({ ...table, memberIds: [...(table.memberIds || [])] }));
+
+    if (selectedGuest.from !== null) {
+      const index = next[selectedGuest.from].memberIds.indexOf(selectedGuest.id);
+      if (index >= 0) next[selectedGuest.from].memberIds.splice(index, 1);
+    }
+
+    if (to !== null) {
+      if (next[to].memberIds.length >= next[to].capacity) {
+        if (selectedGuest.from !== null) {
+          const oldIndex = next[selectedGuest.from].memberIds.indexOf(selectedGuest.id);
+          if (oldIndex < 0) next[selectedGuest.from].memberIds.push(selectedGuest.id);
+        }
+        message.warning("That table is full");
+        setSelectedGuest(null);
+        return;
+      }
+      next[to].memberIds.push(selectedGuest.id);
+    }
+
+    setTables(next);
+    setSelectedGuest(null);
+  }
+
   async function save() {
     setSaving(true);
     try {
@@ -103,6 +131,13 @@ export function SeatingMap({
 
   return (
     <div>
+      {selectedGuest ? (
+        <div className="mobile-seat-selection">
+          <strong>Place {names.get(selectedGuest.id) || "selected guest"}</strong>
+          <Button size="small" onClick={() => moveSelectedGuest(null)}>Move to unseated</Button>
+          <Button size="small" onClick={() => setSelectedGuest(null)}>Cancel</Button>
+        </div>
+      ) : null}
       <div className="seating-filter-bar">
         <Input.Search
           allowClear
@@ -140,13 +175,14 @@ export function SeatingMap({
               <button
                 key={id}
                 type="button"
-                className="seat"
+                className={selectedGuest?.id === id ? "seat is-selected" : "seat"}
                 draggable
                 onDragStart={() => setDragged({ id, from: null })}
                 onDragEnd={() => {
                   setDragged(null);
                   setOver(null);
                 }}
+                onClick={() => setSelectedGuest({ id, from: null })}
               >
                 <span>{memberInitials(name)}</span>
                 {name}
@@ -175,6 +211,10 @@ export function SeatingMap({
             }}
             onDragLeave={() => setOver((current) => (current === index ? null : current))}
             onDrop={() => drop(index)}
+            onClick={(event) => {
+              if ((event.target as HTMLElement).closest("button.seat")) return;
+              moveSelectedGuest(index);
+            }}
           >
             <header>
               <strong>{table.name}</strong>
@@ -190,13 +230,14 @@ export function SeatingMap({
                   <button
                     key={id}
                     type="button"
-                    className="seat"
+                    className={selectedGuest?.id === id ? "seat is-selected" : "seat"}
                     draggable
                     onDragStart={() => setDragged({ id, from: index })}
                     onDragEnd={() => {
                       setDragged(null);
                       setOver(null);
                     }}
+                    onClick={() => setSelectedGuest({ id, from: index })}
                   >
                     <span>{memberInitials(name)}</span>
                     {name}

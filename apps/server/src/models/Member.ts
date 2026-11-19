@@ -6,6 +6,7 @@ const memberSchema = new Schema(
     surname: { type: String, default: "", trim: true },
     fatherName: { type: String, default: "" },
     birthday: { type: String, default: "" },
+    age: { type: Number, min: 0, max: 120, default: null },
     gender: { type: String, default: "" },
     telephone: { type: String, default: "" },
     email: { type: String, default: "" },

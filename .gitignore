@@ -48,3 +48,4 @@ Thumbs.db
 # Misc
 *.local
 members.json
+data/members.json

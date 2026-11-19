@@ -7,6 +7,7 @@ export const memberInput = z.object({
   surname: z.string().default(""),
   fatherName: z.string().default(""),
   birthday: z.string().default(""),
+  age: z.number().int().min(0).max(120).nullable().default(null),
   gender: z.string().default(""),
   telephone: z.string().default(""),
   email: z.string().default(""),

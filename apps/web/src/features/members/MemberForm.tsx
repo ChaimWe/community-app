@@ -1,4 +1,4 @@
-import { Button, DatePicker, Form, Input, Select } from "antd";
+import { Button, DatePicker, Form, Input, InputNumber, Select } from "antd";
 import dayjs from "dayjs";
 import { Member, MemberInput } from "../../api/types";
 import { PROGRAM_OPTIONS } from "../../lib/labels";
@@ -43,9 +43,14 @@ export function MemberForm({
         <Form.Item name="fatherName" label="Father's name">
           <Input />
         </Form.Item>
-        <Form.Item name="birthday" label="Birthday">
-          <DatePicker className="full" />
-        </Form.Item>
+        <div className="birthday-age-row">
+          <Form.Item name="birthday" label="Birthday">
+            <DatePicker className="full" />
+          </Form.Item>
+          <Form.Item name="age" label="Age if birthday unknown">
+            <InputNumber min={0} max={120} className="full" placeholder="Age" />
+          </Form.Item>
+        </div>
       </div>
       <Form.Item name="gender" label="Gender">
         <Select

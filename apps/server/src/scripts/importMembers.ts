@@ -10,6 +10,7 @@ type ImportedMember = {
   surname?: string;
   fatherName?: string;
   birthday?: string;
+  age?: number | string | null;
   gender?: string;
   telephone?: string;
   email?: string;
@@ -44,6 +45,11 @@ async function run() {
       surname,
       fatherName: record.fatherName || "",
       birthday: record.birthday || "",
+      age: typeof record.age === "number" && Number.isFinite(record.age)
+        ? record.age
+        : typeof record.age === "string" && record.age.trim()
+          ? Number.parseInt(record.age, 10) || null
+          : null,
       gender: record.gender || "",
       telephone,
       email,

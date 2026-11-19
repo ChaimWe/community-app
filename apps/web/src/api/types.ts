@@ -4,6 +4,7 @@ export interface Member {
   surname: string;
   fatherName?: string;
   birthday?: string;
+  age?: number | null;
   gender?: string;
   telephone?: string;
   email?: string;
@@ -22,6 +23,7 @@ export interface MemberInput {
   surname?: string;
   fatherName?: string;
   birthday?: string;
+  age?: number | null;
   gender?: string;
   telephone?: string;
   email?: string;

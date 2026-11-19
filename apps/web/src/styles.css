@@ -384,6 +384,11 @@ a { -webkit-tap-highlight-color: transparent; }
   display: none;
 }
 
+.birthday-age-row {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
 @media (max-width: 900px) {
   .login {
     grid-template-columns: 1fr;
@@ -525,6 +530,60 @@ a { -webkit-tap-highlight-color: transparent; }
 
   .account-sheet .ant-modal-body > .ant-btn {
     margin-top: 8px;
+  }
+
+  .mobile-seat-selection {
+    position: sticky;
+    top: 8px;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 10px;
+    border: 1px solid #0f6e64;
+    border-radius: 12px;
+    background: #eff8f6;
+  }
+
+  .mobile-seat-selection strong {
+    flex: 1;
+  }
+
+  .mobile-seat-selection .ant-btn {
+    min-height: 44px;
+  }
+
+  .seat,
+  .attendance-member,
+  .mobile-member-card,
+  .mobile-bottom-nav a,
+  .mobile-bottom-nav button,
+  .member-lifecycle-actions .ant-btn,
+  .sheet-form-actions .ant-btn,
+  .member-form-actions .ant-btn {
+    min-height: 44px;
+  }
+
+  .seating-filter-bar,
+  .attendance-list,
+  .ant-modal-body {
+    overscroll-behavior: contain;
+  }
+
+  .table-card {
+    min-height: 96px;
+  }
+
+  .table-card.is-over,
+  .table-card:active {
+    outline: 3px solid #0f6e64;
+  }
+
+  .seat.is-selected,
+  .seat:focus-visible {
+    outline: 2px solid #0f6e64;
+    outline-offset: 2px;
   }
 }
 
