@@ -22,8 +22,13 @@ const eventTypes = Object.entries(EVENT_TYPE_LABELS).map(([value, label]) => ({ 
 
 export function Events() {
   const [includeArchived, setIncludeArchived] = useState(false);
+  const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const [editEvent, setEditEvent] = useState<CommunityEvent | null>(null);
-  const events = useEvents(includeArchived);
+  const session = useSession();
+  const isAdmin = Boolean(session.data?.isAdmin);
+  const events = useEvents(isAdmin && includeArchived);
+  const activeEvents = (events.data || []).filter((event) => !event.archived);
+  const archivedEvents = isAdmin ? (events.data || []).filter((event) => event.archived) : [];
   const members = useMembers();
   const createEvent = useCreateEvent();
   const updateEvent = useUpdateEvent();
@@ -31,7 +36,6 @@ export function Events() {
   const archiveEvent = useArchiveEvent();
   const restoreEvent = useRestoreEvent();
   const deleteEvent = useDeleteEvent();
-  const session = useSession();
   const [open, setOpen] = useState(false);
 
   return (
@@ -46,15 +50,17 @@ export function Events() {
           </Button>
         }
       />
-      <div className="event-view-options">
-        <span>Include archived events</span>
-        <Switch checked={includeArchived} onChange={setIncludeArchived} />
-      </div>
+      {isAdmin ? (
+        <div className="event-view-options">
+          <span>Include archived events</span>
+          <Switch checked={includeArchived} onChange={setIncludeArchived} />
+        </div>
+      ) : null}
       {events.isLoading ? (
         <Skeleton active />
-      ) : events.data?.length ? (
+      ) : activeEvents.length ? (
         <div className="stack">
-          {events.data.map((event) => {
+          {activeEvents.map((event) => {
             const plan = event.seatingPlans?.[event.seatingPlans.length - 1];
             return (
               <article key={event._id} className="event-card">
@@ -65,32 +71,28 @@ export function Events() {
                     <p>{event.description || "No description yet."}</p>
                   </div>
                   <time>{dayjs(event.date).format("ddd D MMM YYYY · h:mm A")}</time>
+                  <Button
+                    type="text"
+                    aria-expanded={expandedEventId === event._id}
+                    onClick={() => setExpandedEventId((current) => current === event._id ? null : event._id)}
+                  >
+                    {expandedEventId === event._id ? "Hide details" : "Open event"}
+                  </Button>
                 </header>
+                <div className={`event-details ${expandedEventId === event._id ? "expanded" : ""}`}>
                 {!session.data?.isAdmin && session.data?.permission !== "edit" ? null : (
                   <div className="event-card-actions">
                     <Button onClick={() => setEditEvent(event)}>Edit event</Button>
-                    {event.archived ? (
-                      <Popconfirm
-                        title="Restore this event?"
-                        onConfirm={async () => {
-                          await restoreEvent.mutateAsync(event._id);
-                          message.success("Event restored");
-                        }}
-                      >
-                        <Button>Restore</Button>
-                      </Popconfirm>
-                    ) : (
-                      <Popconfirm
-                        title="Archive this event?"
-                        description="It will leave the active event list."
-                        onConfirm={async () => {
-                          await archiveEvent.mutateAsync(event._id);
-                          message.success("Event archived");
-                        }}
-                      >
-                        <Button>Archive</Button>
-                      </Popconfirm>
-                    )}
+                    <Popconfirm
+                      title="Archive this event?"
+                      description="It will leave the active event list."
+                      onConfirm={async () => {
+                        await archiveEvent.mutateAsync(event._id);
+                        message.success("Event archived");
+                      }}
+                    >
+                      <Button>Archive</Button>
+                    </Popconfirm>
                     {session.data?.isAdmin ? (
                       <Popconfirm
                         title="Permanently delete this event?"
@@ -184,42 +186,6 @@ export function Events() {
                     })}
                   </div>
                 </section>
-                <div className="event-actions">
-                  <Button
-                    type="link"
-                    onClick={() => {
-                      setEditEvent(event);
-                      setOpen(true);
-                    }}
-                  >
-                    Edit
-                  </Button>
-                  <Popconfirm
-                    title="Archive this event?"
-                    onConfirm={async () => {
-                      await archiveEvent.mutateAsync(event._id);
-                      message.success("Event archived");
-                    }}
-                    okText="Yes"
-                    cancelText="No"
-                  >
-                    <Button type="link" danger>
-                      Archive
-                    </Button>
-                  </Popconfirm>
-                  <Popconfirm
-                    title="Delete this event?"
-                    onConfirm={async () => {
-                      await deleteEvent.mutateAsync(event._id);
-                      message.success("Event deleted");
-                    }}
-                    okText="Yes"
-                    cancelText="No"
-                  >
-                    <Button type="link" danger>
-                      Delete
-                    </Button>
-                  </Popconfirm>
                 </div>
               </article>
             );
@@ -452,154 +418,48 @@ export function Events() {
           </Form>
         ) : null}
       </Modal>
-      <div className="panel archived-events">
-        <h2>Archived events</h2>
-        <Switch
-          checked={includeArchived}
-          onChange={(checked) => setIncludeArchived(checked)}
-          checkedChildren="Show archived"
-          unCheckedChildren="Hide archived"
-        />
-        {events.isLoading ? (
-          <Skeleton active />
-        ) : events.data?.length ? (
-          <div className="stack">
-            {events.data.map((event) => {
-              const plan = event.seatingPlans?.[event.seatingPlans.length - 1];
-              return (
-                <article key={event._id} className="event-card">
-                  <header>
-                    <div>
-                      <span className="pill">{EVENT_TYPE_LABELS[event.type] || event.type}</span>
-                      <h2>{event.name}</h2>
-                      <p>{event.description || "No description yet."}</p>
-                    </div>
-                    <time>{dayjs(event.date).format("ddd D MMM YYYY · h:mm A")}</time>
-                  </header>
-                  <div className="event-meta">
-                    <span>
-                      {event.tableConfigurations?.length
-                        ? event.tableConfigurations.map((table) => `${table.name}: ${table.capacity}`).join(" · ")
-                        : `${event.tableCount} tables · ${event.tableCapacity} seats per table`}
-                    </span>
-                    <span>{event.attendeeIds?.length || 0} guests</span>
+      {isAdmin && includeArchived ? (
+        <section className="panel archived-events">
+          <h2>Archived events</h2>
+          {archivedEvents.length ? (
+            <div className="stack">
+              {archivedEvents.map((event) => (
+                <article key={event._id} className="archived-event-row">
+                  <div>
+                    <strong>{event.name}</strong>
+                    <span>{dayjs(event.date).format("ddd D MMM YYYY")}</span>
                   </div>
-                  {plan ? (
-                    <div className="plan">
-                      <div className="plan-head">
-                        <div>
-                          <strong>{plan.name}</strong>
-                          <span>Score {plan.score}</span>
-                        </div>
-                        <Button
-                          onClick={async () => {
-                            await generateSeating.mutateAsync(event._id);
-                            message.success("New seating generated");
-                          }}
-                          loading={generateSeating.isPending}
-                        >
-                          Generate again
-                        </Button>
-                      </div>
-                      <SeatingMap
-                        eventId={event._id}
-                        plan={plan}
-                        members={members.data || []}
-                        attendeeIds={event.attendeeIds || []}
-                        onSaved={() => events.refetch()}
-                      />
-                    </div>
-                  ) : (
-                    <div className="plan-empty">
-                      <p>No seating plan yet. Add guests, then generate a first arrangement.</p>
-                      <Button
-                        type="primary"
-                        disabled={!event.attendeeIds?.length}
-                        loading={generateSeating.isPending}
-                        onClick={async () => {
-                          await generateSeating.mutateAsync(event._id);
-                          message.success("Seating generated");
-                        }}
-                      >
-                        Generate seating
-                      </Button>
-                    </div>
-                  )}
-                  <section className="event-attendance">
-                    <div className="event-attendance-header">
-                      <strong>Who is coming?</strong>
-                      <span>{event.attendeeIds?.length || 0} of {(members.data || []).length} members marked coming</span>
-                    </div>
-                    <div className="attendance-list">
-                      {(members.data || []).map((member) => {
-                        const memberId = String(member._id);
-                        const coming = (event.attendeeIds || []).map(String).includes(memberId);
-                        return (
-                          <label className="attendance-member" key={memberId}>
-                            <Checkbox
-                              checked={coming}
-                              onChange={(change) => {
-                                const current = (event.attendeeIds || []).map(String);
-                                const attendeeIds = change.target.checked
-                                  ? [...current, memberId]
-                                  : current.filter((id) => id !== memberId);
-                                updateEvent.mutate({ id: event._id, data: { attendeeIds } });
-                              }}
-                            />
-                            <span>{memberName(member)}</span>
-                            <small>{coming ? "Coming" : "Not marked"}</small>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </section>
-                  <div className="event-actions">
-                    <Button
-                      type="link"
-                      onClick={() => {
-                        setEditEvent(event);
-                        setOpen(true);
-                      }}
-                    >
-                      Edit
-                    </Button>
+                  <div className="event-card-actions">
                     <Popconfirm
-                      title="Restore this event?"
+                      title="Unarchive this event?"
                       onConfirm={async () => {
                         await restoreEvent.mutateAsync(event._id);
-                        message.success("Event restored");
+                        message.success("Event unarchived");
                       }}
-                      okText="Yes"
-                      cancelText="No"
                     >
-                      <Button type="link" danger>
-                        Restore
-                      </Button>
+                      <Button type="primary">Unarchive</Button>
                     </Popconfirm>
                     <Popconfirm
-                      title="Delete this event?"
+                      title="Permanently delete this event?"
+                      description="This cannot be undone."
+                      okText="Delete permanently"
+                      okButtonProps={{ danger: true }}
                       onConfirm={async () => {
                         await deleteEvent.mutateAsync(event._id);
-                        message.success("Event deleted");
+                        message.success("Event permanently deleted");
                       }}
-                      okText="Yes"
-                      cancelText="No"
                     >
-                      <Button type="link" danger>
-                        Delete
-                      </Button>
+                      <Button danger>Delete</Button>
                     </Popconfirm>
                   </div>
                 </article>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="panel empty">
-            <p>No archived events found.</p>
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          ) : (
+            <div className="panel empty"><p>No archived events found.</p></div>
+          )}
+        </section>
+      ) : null}
     </section>
   );
 }

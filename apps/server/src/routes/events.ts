@@ -10,7 +10,7 @@ router.post("/", requireEdit, events.create);
 router.get("/:id", events.get);
 router.patch("/:id", requireEdit, events.update);
 router.patch("/:id/archive", requireEdit, events.archive);
-router.patch("/:id/restore", requireEdit, events.restore);
+router.patch("/:id/restore", requireAdmin, events.restore);
 router.delete("/:id", requireAdmin, events.remove);
 router.post("/:id/seating/generate", requireEdit, events.generate);
 router.patch("/:id/seating/:planId", requireEdit, events.saveSeating);

@@ -1,9 +1,13 @@
 import { Request, Response } from "express";
 import { routeId } from "../lib/routeId";
 import * as service from "../services/eventService";
+import { AuthRequest } from "../middleware/auth";
 
-export async function list(req: Request, res: Response) {
+export async function list(req: AuthRequest, res: Response) {
   const includeArchived = String(req.query.includeArchived || "") === "true";
+  if (includeArchived && !req.isAdmin) {
+    return res.status(403).json({ message: "Admin access required to view archived events" });
+  }
   res.json(await service.listEvents(includeArchived));
 }
 
@@ -11,23 +15,27 @@ export async function create(req: Request, res: Response) {
   res.status(201).json(await service.createEvent(req.body));
 }
 
-export async function update(req: Request, res: Response) {
-  res.json(await service.updateEvent(routeId(req.params.id), req.body));
+export async function update(req: AuthRequest, res: Response) {
+  const event = await service.getEvent(routeId(req.params.id));
+  if (!event || (event.archived && !req.isAdmin)) return res.status(404).json({ message: "Event not found" });
+  res.json(await service.updateEvent(event.id, req.body));
 }
 
-export async function get(req: Request, res: Response) {
+export async function get(req: AuthRequest, res: Response) {
   const event = await service.getEvent(routeId(req.params.id));
-  if (!event) return res.status(404).json({ message: "Event not found" });
+  if (!event || (event.archived && !req.isAdmin)) return res.status(404).json({ message: "Event not found" });
   res.json(event);
 }
 
-export async function generate(req: Request, res: Response) {
-  res.json(await service.generateSeating(routeId(req.params.id)));
+export async function generate(req: AuthRequest, res: Response) {
+  const event = await service.getEvent(routeId(req.params.id));
+  if (!event || (event.archived && !req.isAdmin)) return res.status(404).json({ message: "Event not found" });
+  res.json(await service.generateSeating(event.id));
 }
 
-export async function saveSeating(req: Request, res: Response) {
-  const event = await service.updateEvent(routeId(req.params.id), { $set: {} });
-  if (!event) return res.status(404).json({ message: "Event not found" });
+export async function saveSeating(req: AuthRequest, res: Response) {
+  const event = await service.getEvent(routeId(req.params.id));
+  if (!event || (event.archived && !req.isAdmin)) return res.status(404).json({ message: "Event not found" });
 
   const plan = event.seatingPlans.id(routeId(req.params.planId));
   if (!plan) return res.status(404).json({ message: "Plan not found" });
