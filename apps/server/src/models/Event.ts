@@ -35,6 +35,8 @@ const schema = new Schema(
       default: [],
     },
     seatingPlans: { type: [seatingSchema], default: [] },
+    archived: { type: Boolean, default: false },
+    archivedAt: { type: Date, default: null },
   },
   { timestamps: true },
 );

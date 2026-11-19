@@ -24,10 +24,10 @@ export function useGroups() {
   });
 }
 
-export function useEvents() {
+export function useEvents(includeArchived = false) {
   return useQuery({
-    queryKey: ["events"],
-    queryFn: async () => (await api.get<CommunityEvent[]>("/events")).data,
+    queryKey: ["events", includeArchived],
+    queryFn: async () => (await api.get<CommunityEvent[]>("/events", { params: { includeArchived } })).data,
   });
 }
 
@@ -112,5 +112,29 @@ export function useDeleteMember() {
       queryClient.invalidateQueries({ queryKey: ["members"] });
       queryClient.invalidateQueries({ queryKey: ["member"] });
     },
+  });
+}
+
+export function useArchiveEvent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.patch(`/events/${id}/archive`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["events"] }),
+  });
+}
+
+export function useRestoreEvent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.patch(`/events/${id}/restore`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["events"] }),
+  });
+}
+
+export function useDeleteEvent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/events/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["events"] }),
   });
 }

@@ -68,9 +68,11 @@ export function Groups() {
           <Form.Item name="seatingMode" label="Default seating">
             <Select options={seatingModes} placeholder="No preference" allowClear />
           </Form.Item>
-          <Button type="primary" htmlType="submit" loading={createGroup.isPending}>
-            Create group
-          </Button>
+          <div className="sheet-form-actions">
+            <Button type="primary" htmlType="submit" block loading={createGroup.isPending}>
+              Create group
+            </Button>
+          </div>
         </Form>
       </Modal>
     </section>

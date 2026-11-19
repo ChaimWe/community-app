@@ -91,9 +91,11 @@ export function MemberForm({
         <Input />
       </Form.Item>
       {!readOnly && (
-        <Button type="primary" htmlType="submit">
-          Save member
-        </Button>
+        <div className="member-form-actions">
+          <Button type="primary" htmlType="submit" block>
+            Save member
+          </Button>
+        </div>
       )}
     </Form>
   );

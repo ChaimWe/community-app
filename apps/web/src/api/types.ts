@@ -71,4 +71,6 @@ export interface CommunityEvent {
   tableCapacity: number;
   tableConfigurations?: Array<{ name: string; capacity: number }>;
   seatingPlans?: SeatingPlan[];
+  archived?: boolean;
+  archivedAt?: string;
 }

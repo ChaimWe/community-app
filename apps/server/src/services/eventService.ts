@@ -1,8 +1,9 @@
 import { Event } from "../models/Event";
 import { Connection } from "../models/Connection";
 
-export async function listEvents() {
-  return Event.find().sort({ date: -1 });
+export async function listEvents(includeArchived = false) {
+  const filter = includeArchived ? {} : { archived: { $ne: true } };
+  return Event.find(filter).sort({ date: -1 });
 }
 
 export async function createEvent(data: Record<string, unknown>) {
@@ -98,4 +99,16 @@ export async function generateSeating(eventId: string) {
 
   await event.save();
   return event;
+}
+
+export async function archiveEvent(id: string) {
+  return Event.findByIdAndUpdate(id, { archived: true, archivedAt: new Date() }, { new: true });
+}
+
+export async function restoreEvent(id: string) {
+  return Event.findByIdAndUpdate(id, { archived: false, archivedAt: null }, { new: true });
+}
+
+export async function deleteEvent(id: string) {
+  return Event.findByIdAndDelete(id);
 }

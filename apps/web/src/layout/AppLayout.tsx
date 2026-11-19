@@ -8,6 +8,7 @@ import {
   MenuOutlined,
   TeamOutlined,
   UserAddOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button, Form, Input, Modal, message } from "antd";
@@ -29,6 +30,7 @@ export function AppLayout() {
   const session = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const logout = useMutation({
     mutationFn: () => api.post("/auth/logout"),
     onSettled: async () => {
@@ -103,6 +105,50 @@ export function AppLayout() {
       </aside>
       <main className="stage"><Outlet /></main>
 
+      <nav className="mobile-bottom-nav" aria-label="Primary mobile navigation">
+        {links.map((link) => (
+          <NavLink key={link.to} to={link.to} end={link.to === "/"}>
+            {link.icon}
+            <span>{link.label}</span>
+          </NavLink>
+        ))}
+        <button type="button" onClick={() => setAccountOpen(true)}>
+          <UserOutlined />
+          <span>Account</span>
+        </button>
+      </nav>
+
+      <Modal
+        title="Account"
+        open={accountOpen}
+        footer={null}
+        onCancel={() => setAccountOpen(false)}
+        destroyOnClose
+        className="account-sheet"
+      >
+        <div className="mobile-account-details">
+          <strong>{session.data?.name || "Signed in"}</strong>
+          <small>{session.data?.email}</small>
+        </div>
+        {session.data?.isAdmin ? (
+          <Button block onClick={() => {
+            setAccountOpen(false);
+            navigate("/pending");
+          }}>
+            <UserAddOutlined /> Pending requests
+          </Button>
+        ) : null}
+        <Button block icon={<KeyOutlined />} onClick={() => {
+          setAccountOpen(false);
+          setPasswordOpen(true);
+        }}>
+          Change password
+        </Button>
+        <Button block danger icon={<LogoutOutlined />} loading={logout.isPending} onClick={() => logout.mutate()}>
+          Sign out
+        </Button>
+      </Modal>
+
       <Modal
         title="Change password"
         open={passwordOpen}
@@ -124,9 +170,11 @@ export function AppLayout() {
           <Form.Item name="confirmPassword" label="Confirm new password" rules={[{ required: true }]}>
             <Input.Password autoComplete="new-password" />
           </Form.Item>
-          <Button type="primary" htmlType="submit" block loading={changePassword.isPending}>
-            Change password
-          </Button>
+          <div className="sheet-form-actions">
+            <Button type="primary" htmlType="submit" block loading={changePassword.isPending}>
+              Change password
+            </Button>
+          </div>
         </Form>
       </Modal>
     </div>

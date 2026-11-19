@@ -1,3 +1,4 @@
+import { FilterOutlined } from "@ant-design/icons";
 import { Button, Input, Modal, Popconfirm, Select, Switch, Table, Tag, message } from "antd";
 import { useEffect, useState } from "react";
 import {
@@ -23,6 +24,7 @@ export function Members() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [includeArchived, setIncludeArchived] = useState(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const members = useMembers(search, program, includeArchived);
   const createMember = useCreateMember();
   const updateMember = useUpdateMember();
@@ -63,21 +65,30 @@ export function Members() {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
-        <Select
-          allowClear
-          className="program-filter"
-          placeholder="Filter by program"
-          value={program || undefined}
-          onChange={(value) => setProgram(value || "")}
-          options={PROGRAM_OPTIONS.map((value) => ({ value, label: value }))}
-        />
-        <span className="archived-toggle">
-          <span className="label">Include archived members</span>
-          <Switch
-            checked={includeArchived}
-            onChange={(checked) => setIncludeArchived(checked)}
+        <Button
+          className="mobile-filter-button"
+          icon={<FilterOutlined />}
+          onClick={() => setMobileFiltersOpen((open) => !open)}
+        >
+          Filters
+        </Button>
+        <div className={`member-filter-options ${mobileFiltersOpen ? "open" : ""}`}>
+          <Select
+            allowClear
+            className="program-filter"
+            placeholder="Filter by program"
+            value={program || undefined}
+            onChange={(value) => setProgram(value || "")}
+            options={PROGRAM_OPTIONS.map((value) => ({ value, label: value }))}
           />
-        </span>
+          <span className="archived-toggle">
+            <span className="label">Include archived members</span>
+            <Switch
+              checked={includeArchived}
+              onChange={(checked) => setIncludeArchived(checked)}
+            />
+          </span>
+        </div>
       </div>
       <div className="panel table-panel">
         <Table<Member>
@@ -101,6 +112,32 @@ export function Members() {
             },
           ]}
         />
+      </div>
+
+      <div className="mobile-member-list">
+        {members.isLoading ? <p className="muted">Loading members...</p> : null}
+        {(members.data || []).map((member) => (
+          <button
+            type="button"
+            className="mobile-member-card"
+            key={member._id}
+            onClick={() => openMember(member)}
+          >
+            <strong>{memberName(member)}</strong>
+            <span>{member.telephone || member.email || "No contact details"}</span>
+            <div className="mobile-member-programs">
+              {(member.programs || []).length
+                ? (member.programs || []).slice(0, 3).map((programName) => (
+                    <Tag key={programName}>{programName}</Tag>
+                  ))
+                : <em>Not assigned to a program</em>}
+              {(member.programs || []).length > 3 ? <Tag>+{(member.programs || []).length - 3}</Tag> : null}
+            </div>
+          </button>
+        ))}
+        {!members.isLoading && !(members.data || []).length ? (
+          <div className="panel empty">No members match this view.</div>
+        ) : null}
       </div>
 
       <Modal
