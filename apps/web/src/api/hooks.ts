@@ -17,10 +17,10 @@ export function useMember(id?: string) {
   });
 }
 
-export function useGroups() {
+export function useGroups(includeArchived = false) {
   return useQuery({
-    queryKey: ["groups"],
-    queryFn: async () => (await api.get<Group[]>("/groups")).data,
+    queryKey: ["groups", includeArchived],
+    queryFn: async () => (await api.get<Group[]>("/groups", { params: { includeArchived } })).data,
   });
 }
 
@@ -54,7 +54,21 @@ export function useCreateGroup() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: Partial<Group>) => api.post("/groups", data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["groups"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: ["members"] });
+    },
+  });
+}
+
+export function useUpdateGroup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Group> }) => api.patch(`/groups/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: ["members"] });
+    },
   });
 }
 
@@ -166,5 +180,32 @@ export function useDeleteEvent() {
   return useMutation({
     mutationFn: (id: string) => api.delete(`/events/${id}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["events"] }),
+  });
+}
+
+export function useArchiveGroup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.patch(`/groups/${id}/archive`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["groups"] }),
+  });
+}
+
+export function useRestoreGroup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.patch(`/groups/${id}/restore`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["groups"] }),
+  });
+}
+
+export function useDeleteGroup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/groups/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: ["members"] });
+    },
   });
 }

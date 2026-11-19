@@ -389,6 +389,12 @@ a { -webkit-tap-highlight-color: transparent; }
     grid-template-columns: 1fr;
   }
 
+.programs-help {
+  margin: -4px 0 8px;
+  color: #6d655d;
+  font-size: 13px;
+}
+
 @media (max-width: 900px) {
   .login {
     grid-template-columns: 1fr;
@@ -738,5 +744,41 @@ a { -webkit-tap-highlight-color: transparent; }
     margin: 0 -4px;
     padding: 10px 4px calc(10px + env(safe-area-inset-bottom));
     background: #fffcf8;
+  }
+
+  .group-member-checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 280px;
+    overflow: auto;
+    padding: 8px;
+    border: 1px solid #e7dfd2;
+    border-radius: 12px;
+    background: #fffdf8;
+  }
+  .group-member-checklist .ant-checkbox-wrapper {
+    min-height: 44px;
+    align-items: center;
+    padding: 6px 4px;
+  }
+  .group-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .archived-card {
+    opacity: 0.78;
+  }
+  @media (max-width: 560px) {
+    .group-card-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+    }
+    .group-card-actions .ant-btn {
+      width: 100%;
+      min-height: 44px;
+    }
   }
 }

@@ -78,6 +78,7 @@ export function MemberForm({
       <Form.Item name="jewishStatus" label="Jewish status">
         <Input />
       </Form.Item>
+      <p className="programs-help">Age programs are assigned automatically from birthday or age when you save.</p>
       <Form.Item name="programs" label="Programs">
         <Select
           mode="multiple"

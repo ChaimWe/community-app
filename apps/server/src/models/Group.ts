@@ -7,6 +7,8 @@ const schema = new Schema(
     description: { type: String, default: "" },
     memberIds: { type: [Schema.Types.ObjectId], ref: "Member", default: [] },
     seatingMode: { type: String, enum: ["NONE", "KEEP_TOGETHER", "SPREAD"], default: "NONE" },
+    archived: { type: Boolean, default: false },
+    archivedAt: { type: Date, default: null },
   },
   { timestamps: true },
 );

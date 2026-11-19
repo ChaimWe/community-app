@@ -1,4 +1,5 @@
 import { Member } from "../models/Member";
+import { assignAgePrograms } from "../utils/agePrograms";
 
 function searchFilter(search: string, program = "", includeArchived = false) {
   const filters: Record<string, unknown>[] = [];
@@ -35,11 +36,18 @@ export async function getMember(id: string) {
 }
 
 export async function createMember(data: Record<string, unknown>) {
-  return Member.create(data);
+  return Member.create(assignAgePrograms(data));
 }
 
 export async function updateMember(id: string, data: Record<string, unknown>) {
-  return Member.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+  const member = await Member.findById(id);
+  if (!member) return null;
+
+  Object.assign(member, data);
+  const normalized = assignAgePrograms(member.toObject());
+  member.programs = normalized.programs as string[];
+  await member.save();
+  return member;
 }
 
 export async function archiveMember(id: string) {

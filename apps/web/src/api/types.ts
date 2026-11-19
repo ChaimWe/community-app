@@ -43,6 +43,8 @@ export interface Group {
   description?: string;
   memberIds?: string[];
   seatingMode?: "NONE" | "KEEP_TOGETHER" | "SPREAD";
+  archived?: boolean;
+  archivedAt?: string;
 }
 
 export interface SeatingTable {
