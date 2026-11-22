@@ -13,12 +13,70 @@ import {
   useUpdateEvent,
 } from "../api/hooks";
 import { useSession } from "../api/session";
-import { CommunityEvent } from "../api/types";
+import { CommunityEvent, Member } from "../api/types";
 import { PageHeader } from "../components/PageHeader";
 import { SeatingMap } from "../features/seating/SeatingMap";
+import { SearchableMemberPicker } from "../features/members/SearchableMemberPicker";
 import { EVENT_TYPE_LABELS, memberName } from "../lib/labels";
 
 const eventTypes = Object.entries(EVENT_TYPE_LABELS).map(([value, label]) => ({ value, label }));
+
+function AttendanceMemberList({
+  event,
+  members,
+  onToggle,
+}: {
+  event: CommunityEvent;
+  members: Member[];
+  onToggle: (eventId: string, attendeeIds: string[]) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const query = search.trim().toLowerCase();
+  const visibleMembers = members.filter((member) => {
+    if (!query) return true;
+    const searchable = [
+      memberName(member),
+      member.telephone || "",
+      member.email || "",
+      ...(member.programs || []),
+    ].join(" ").toLowerCase();
+    return searchable.includes(query);
+  });
+
+  return (
+    <div className="attendance-searchable">
+      <Input.Search
+        allowClear
+        placeholder="Search members"
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+      />
+      <div className="attendance-list">
+        {visibleMembers.map((member) => {
+          const memberId = String(member._id);
+          const coming = (event.attendeeIds || []).map(String).includes(memberId);
+          return (
+            <label className="attendance-member" key={memberId}>
+              <Checkbox
+                checked={coming}
+                onChange={(change) => {
+                  const current = (event.attendeeIds || []).map(String);
+                  const attendeeIds = change.target.checked
+                    ? [...current, memberId]
+                    : current.filter((id) => id !== memberId);
+                  onToggle(event._id, attendeeIds);
+                }}
+              />
+              <span>{memberName(member)}</span>
+              <small>{coming ? "Coming" : "Not marked"}</small>
+            </label>
+          );
+        })}
+        {visibleMembers.length === 0 ? <span className="muted attendance-empty">No matching members.</span> : null}
+      </div>
+    </div>
+  );
+}
 
 export function Events() {
   const [includeArchived, setIncludeArchived] = useState(false);
@@ -163,28 +221,11 @@ export function Events() {
                     <strong>Who is coming?</strong>
                     <span>{event.attendeeIds?.length || 0} of {(members.data || []).length} members marked coming</span>
                   </div>
-                  <div className="attendance-list">
-                    {(members.data || []).map((member) => {
-                      const memberId = String(member._id);
-                      const coming = (event.attendeeIds || []).map(String).includes(memberId);
-                      return (
-                        <label className="attendance-member" key={memberId}>
-                          <Checkbox
-                            checked={coming}
-                            onChange={(change) => {
-                              const current = (event.attendeeIds || []).map(String);
-                              const attendeeIds = change.target.checked
-                                ? [...current, memberId]
-                                : current.filter((id) => id !== memberId);
-                              updateEvent.mutate({ id: event._id, data: { attendeeIds } });
-                            }}
-                          />
-                          <span>{memberName(member)}</span>
-                          <small>{coming ? "Coming" : "Not marked"}</small>
-                        </label>
-                      );
-                    })}
-                  </div>
+                  <AttendanceMemberList
+                    event={event}
+                    members={members.data || []}
+                    onToggle={(eventId, attendeeIds) => updateEvent.mutate({ id: eventId, data: { attendeeIds } })}
+                  />
                 </section>
                 </div>
               </article>
@@ -294,13 +335,7 @@ export function Events() {
             </Form.List>
           </Form.Item>
           <Form.Item name="attendeeIds" label="Who is coming?">
-            <Checkbox.Group
-              className="attendance-create-list"
-              options={(members.data || []).map((member) => ({
-                label: memberName(member),
-                value: member._id,
-              }))}
-            />
+            <SearchableMemberPicker members={members.data || []} />
           </Form.Item>
           <div className="sheet-form-actions">
             <Button type="primary" htmlType="submit" block loading={createEvent.isPending}>
@@ -402,13 +437,7 @@ export function Events() {
               </Form.List>
             </Form.Item>
             <Form.Item name="attendeeIds" label="Who is coming?">
-              <Checkbox.Group
-                className="attendance-create-list"
-                options={(members.data || []).map((member) => ({
-                  label: memberName(member),
-                  value: member._id,
-                }))}
-              />
+              <SearchableMemberPicker members={members.data || []} />
             </Form.Item>
             <div className="sheet-form-actions">
               <Button type="primary" htmlType="submit" block loading={updateEvent.isPending}>

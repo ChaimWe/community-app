@@ -336,6 +336,26 @@ a { -webkit-tap-highlight-color: transparent; }
 }
 .attendance-member span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .attendance-member small { color: #0f6e64; }
+.attendance-searchable { padding: 10px; }
+.attendance-searchable > .ant-input-search { margin-bottom: 10px; }
+.attendance-empty { grid-column: 1 / -1; padding: 14px; background: #fffdf8; }
+.searchable-member-picker { display: grid; gap: 8px; }
+.searchable-member-list {
+  max-height: 260px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid #e7dfd2;
+  border-radius: 12px;
+  background: #fffdf8;
+}
+.searchable-member-list .ant-checkbox-wrapper {
+  min-height: 44px;
+  align-items: center;
+  padding: 6px 4px;
+}
 .attendance-create-list {
   max-height: 260px;
   overflow: auto;

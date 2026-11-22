@@ -11,8 +11,9 @@ import {
 } from "../api/hooks";
 import { Group } from "../api/types";
 import { PageHeader } from "../components/PageHeader";
-import { GROUP_TYPE_LABELS, SEATING_MODE_LABELS, memberName } from "../lib/labels";
+import { GROUP_TYPE_LABELS, SEATING_MODE_LABELS } from "../lib/labels";
 import { useSession } from "../api/session";
+import { SearchableMemberPicker } from "../features/members/SearchableMemberPicker";
 
 const groupTypes = Object.entries(GROUP_TYPE_LABELS).map(([value, label]) => ({ value, label }));
 const seatingModes = Object.entries(SEATING_MODE_LABELS).map(([value, label]) => ({ value, label }));
@@ -189,37 +190,14 @@ export function Groups() {
 function GroupMemberPicker({ members }: { members: NonNullable<ReturnType<typeof useMembers>["data"]> }) {
   const form = Form.useFormInstance();
   const selectedIds = (Form.useWatch("memberIds", form) || []) as string[];
-  const [search, setSearch] = useState("");
-  const visibleMembers = members.filter((member) => memberName(member).toLowerCase().includes(search.trim().toLowerCase()));
 
   return (
     <>
-      <Input.Search
-        allowClear
-        placeholder="Search members"
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
+      <SearchableMemberPicker
+        members={members}
+        value={selectedIds}
+        onChange={(next) => form.setFieldValue("memberIds", next)}
       />
-      <div className="group-member-checklist">
-        {visibleMembers.map((member) => {
-          const checked = selectedIds.includes(member._id);
-          return (
-            <Checkbox
-              key={member._id}
-              checked={checked}
-              onChange={(event) => {
-                const next = event.target.checked
-                  ? [...selectedIds, member._id]
-                  : selectedIds.filter((id) => id !== member._id);
-                form.setFieldValue("memberIds", next);
-              }}
-            >
-              {memberName(member)}
-            </Checkbox>
-          );
-        })}
-        {visibleMembers.length === 0 ? <span className="muted">No matching members.</span> : null}
-      </div>
       <small className="muted">{selectedIds.length} members selected</small>
     </>
   );
