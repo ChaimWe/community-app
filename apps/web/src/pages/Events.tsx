@@ -17,6 +17,7 @@ import { CommunityEvent, Member } from "../api/types";
 import { PageHeader } from "../components/PageHeader";
 import { SeatingMap } from "../features/seating/SeatingMap";
 import { SearchableMemberPicker } from "../features/members/SearchableMemberPicker";
+import { SearchableGuestPicker } from "../features/members/SearchableGuestPicker";
 import { EVENT_TYPE_LABELS, memberName } from "../lib/labels";
 
 const eventTypes = Object.entries(EVENT_TYPE_LABELS).map(([value, label]) => ({ value, label }));
@@ -264,6 +265,7 @@ export function Events() {
                   ...values,
                   date: values.date.toISOString(),
                   attendeeIds: values.attendeeIds || [],
+                  guestIds: values.guestIds || [],
                 },
               });
               message.success("Event updated");
@@ -272,6 +274,7 @@ export function Events() {
                 ...values,
                 date: values.date.toISOString(),
                 attendeeIds: values.attendeeIds || [],
+                guestIds: values.guestIds || [],
               });
               message.success("Event created");
             }
@@ -337,6 +340,9 @@ export function Events() {
           <Form.Item name="attendeeIds" label="Who is coming?">
             <SearchableMemberPicker members={members.data || []} />
           </Form.Item>
+          <Form.Item name="guestIds" label="Guests">
+            <SearchableGuestPicker />
+          </Form.Item>
           <div className="sheet-form-actions">
             <Button type="primary" htmlType="submit" block loading={createEvent.isPending}>
               Create event
@@ -368,6 +374,7 @@ export function Events() {
                     capacity: editEvent.tableCapacity || 10,
                   }))),
               attendeeIds: editEvent.attendeeIds || [],
+              guestIds: editEvent.guestIds || [],
             }}
             onFinish={async (values) => {
               await updateEvent.mutateAsync({
@@ -376,6 +383,7 @@ export function Events() {
                   ...values,
                   date: values.date.toISOString(),
                   attendeeIds: values.attendeeIds || [],
+                  guestIds: values.guestIds || [],
                 },
               });
               message.success("Event updated");

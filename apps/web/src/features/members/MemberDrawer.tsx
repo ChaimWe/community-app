@@ -3,6 +3,7 @@ import { useMember, useUpdateMember } from "../../api/hooks";
 import { memberInitials, memberName } from "../../lib/labels";
 import { useSession } from "../../api/session";
 import { MemberForm } from "./MemberForm";
+import { GuestList } from "./GuestList";
 
 export function MemberDrawer({ id, onClose }: { id?: string; onClose: () => void }) {
   const member = useMember(id);
@@ -39,6 +40,7 @@ export function MemberDrawer({ id, onClose }: { id?: string; onClose: () => void
             }}
             readOnly={readOnly}
           />
+          <GuestList memberId={id!} hostMember={member.data} readOnly={readOnly} />
         </>
       ) : null}
     </Drawer>
