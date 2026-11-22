@@ -18,3 +18,13 @@ export const memberInput = z.object({
   comments2: z.string().default(""),
   documentLocation: z.string().default(""),
 });
+
+export const guestInput = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  surname: z.string().min(1, "Last name is required"),
+  telephone: z.string().default(""),
+  email: z.string().default(""),
+  guestOf: z.string().regex(/^[a-f\d]{24}$/i, "Invalid member id"),
+  comments: z.string().default(""),
+});
+

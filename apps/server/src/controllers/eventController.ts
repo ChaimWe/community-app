@@ -43,6 +43,7 @@ export async function saveSeating(req: AuthRequest, res: Response) {
   plan.tables = req.body.tables;
   plan.score = req.body.score ?? plan.score;
   plan.lockedMemberIds = req.body.lockedMemberIds ?? plan.lockedMemberIds;
+  plan.lockedGuestIds = req.body.lockedGuestIds ?? plan.lockedGuestIds;
   await event.save();
   res.json(event);
 }

@@ -7,7 +7,6 @@ import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { env } from "./config/env";
 import { connectDatabase } from "./config/database";
-import { seedAdmin } from "./services/authService";
 import { notFound, errorHandler } from "./middleware/errors";
 import auth from "./routes/auth";
 import members from "./routes/members";
@@ -15,12 +14,12 @@ import groups from "./routes/groups";
 import events from "./routes/events";
 import connections from "./routes/connections";
 import relationships from "./routes/relationships";
+import guests from "./routes/guests";
 
 const webDist = path.resolve(__dirname, "../../web/dist");
 
 async function start() {
   await connectDatabase();
-  await seedAdmin();
 
   const app = express();
   app.set("trust proxy", 1);
@@ -66,6 +65,7 @@ async function start() {
   app.use("/api/events", events);
   app.use("/api/connections", connections);
   app.use("/api/relationships", relationships);
+  app.use("/api", guests);
 
   if (fs.existsSync(path.join(webDist, "index.html"))) {
     app.use(express.static(webDist, { index: false, maxAge: env.isProduction ? "1h" : 0 }));

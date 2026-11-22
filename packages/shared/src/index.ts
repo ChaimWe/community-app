@@ -6,6 +6,8 @@ export const GROUP_TYPES = ['CLASS','FRIENDS','AGE_GROUP','FAMILY','YOUTH','OTHE
 export type GroupType = typeof GROUP_TYPES[number];
 export const EVENT_TYPES = ['HOLIDAY_MEAL','AGE_GROUP','COMMUNITY','OTHER'] as const;
 export type EventType = typeof EVENT_TYPES[number];
+export const ATTENDEE_TYPES = ['MEMBER','GUEST'] as const;
+export type AttendeeType = typeof ATTENDEE_TYPES[number];
 export const PROGRAM_OPTIONS = [
   'Babies 1-5',
   'Kids: 6-12',
@@ -23,3 +25,4 @@ export const PROGRAM_OPTIONS = [
 ] as const;
 export type ProgramOption = typeof PROGRAM_OPTIONS[number];
 export interface MemberSummary { _id:string; firstName:string; surname:string; telephone?:string; birthday?:string; }
+export interface GuestSummary { _id:string; firstName:string; surname:string; telephone?:string; guestOf:string; }

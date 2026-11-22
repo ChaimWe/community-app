@@ -2,6 +2,7 @@ import { Event } from "../models/Event";
 import { Connection } from "../models/Connection";
 import { Group } from "../models/Group";
 import { Member } from "../models/Member";
+import { Guest } from "../models/Guest";
 
 export async function listEvents(includeArchived = false) {
   const filter = includeArchived ? {} : { archived: { $ne: true } };
@@ -26,6 +27,16 @@ export async function updateEvent(id: string, data: Record<string, unknown>) {
     }
   }
 
+  if (Array.isArray(data.guestIds)) {
+    const guestIds = data.guestIds.map(String);
+    const allowed = new Set(guestIds);
+    for (const plan of event.seatingPlans) {
+      for (const table of plan.tables) {
+        table.guestIds = table.guestIds.filter((guestId) => allowed.has(String(guestId))) as never;
+      }
+    }
+  }
+
   Object.assign(event, data);
   await event.save();
   return event;
@@ -39,7 +50,20 @@ export async function generateSeating(eventId: string) {
   const event = await Event.findById(eventId);
   if (!event) throw Object.assign(new Error("Event not found"), { status: 404 });
 
-  const ids = event.attendeeIds.map(String);
+  const memberIds = event.attendeeIds.map(String);
+  const guestIds = event.guestIds.map(String);
+  
+  // Load all guests with their host member information
+  const guests = await Guest.find({ _id: { $in: event.guestIds } }).populate("guestOf");
+  
+  // Create a map of guest ID to their host member ID
+  const guestToHostMap = new Map<string, string>();
+  for (const guest of guests) {
+    if (guest.guestOf) {
+      guestToHostMap.set(String(guest._id), String(guest.guestOf._id));
+    }
+  }
+
   const [connections, attendees, groups] = await Promise.all([
     Connection.find({
       fromMemberId: { $in: event.attendeeIds },
@@ -58,7 +82,7 @@ export async function generateSeating(eventId: string) {
   const groupNamesByMember = new Map<string, Set<string>>();
   for (const group of groups) {
     for (const memberId of group.memberIds.map(String)) {
-      if (!ids.includes(memberId)) continue;
+      if (!memberIds.includes(memberId)) continue;
       const names = groupNamesByMember.get(memberId) || new Set<string>();
       names.add(group.name.toLowerCase());
       groupNamesByMember.set(memberId, names);
@@ -95,8 +119,8 @@ export async function generateSeating(eventId: string) {
     if (hasAgeProgram(memberId)) return 2;
     return 3;
   };
-  const originalOrder = new Map(ids.map((id, index) => [id, index]));
-  ids.sort((left, right) => {
+  const originalOrder = new Map(memberIds.map((id, index) => [id, index]));
+  memberIds.sort((left, right) => {
     const priorityDifference = priority(left) - priority(right);
     if (priorityDifference) return priorityDifference;
     const leftGroups = [...(groupNamesByMember.get(left) || [])].sort().join("|");
@@ -113,7 +137,7 @@ export async function generateSeating(eventId: string) {
   }
 
   const capacity = event.tableCapacity || 10;
-  const tableCount = event.tableCount || Math.ceil(ids.length / capacity);
+  const tableCount = event.tableCount || Math.ceil((memberIds.length + guestIds.length) / capacity);
   const configurations = event.tableConfigurations?.length
     ? event.tableConfigurations.map((table) => ({ name: table.name, capacity: table.capacity }))
     : Array.from({ length: tableCount }, (_, index) => ({ name: `Table ${index + 1}`, capacity }));
@@ -121,22 +145,25 @@ export async function generateSeating(eventId: string) {
     name: table.name,
     capacity: table.capacity,
     memberIds: [] as string[],
+    guestIds: [] as string[],
     lockedMemberIds: [] as string[],
+    lockedGuestIds: [] as string[],
   }));
 
   const totalCapacity = tables.reduce((total, table) => total + table.capacity, 0);
-  if (totalCapacity < ids.length) {
+  if (totalCapacity < memberIds.length + guestIds.length) {
     throw Object.assign(
-      new Error(`The configured tables have ${totalCapacity} seats for ${ids.length} attendees`),
+      new Error(`The configured tables have ${totalCapacity} seats for ${memberIds.length + guestIds.length} attendees`),
       { status: 400 },
     );
   }
 
-  for (const id of ids) {
+  // Place members first
+  for (const id of memberIds) {
     let bestIndex = -1;
     let bestScore = -Infinity;
     tables.forEach((table, index) => {
-      if (table.memberIds.length >= table.capacity) return;
+      if (table.memberIds.length + table.guestIds.length >= table.capacity) return;
       let placementScore = 0;
       for (const other of table.memberIds) {
         placementScore += scoreMap.get(`${id}:${other}`) || 0;
@@ -167,6 +194,37 @@ export async function generateSeating(eventId: string) {
     tables[bestIndex].memberIds.push(id);
   }
 
+  // Place guests with their hosts (must be at same table)
+  for (const guestId of guestIds) {
+    const hostId = guestToHostMap.get(guestId);
+    if (!hostId) {
+      throw Object.assign(new Error(`Guest ${guestId} has no valid host member`), { status: 400 });
+    }
+
+    // Find the table where the host is seated
+    let hostTableIndex = -1;
+    for (let i = 0; i < tables.length; i++) {
+      if (tables[i].memberIds.includes(hostId)) {
+        hostTableIndex = i;
+        break;
+      }
+    }
+
+    if (hostTableIndex < 0) {
+      throw Object.assign(new Error(`Host member ${hostId} not found in seating plan`), { status: 400 });
+    }
+
+    const hostTable = tables[hostTableIndex];
+    if (hostTable.memberIds.length + hostTable.guestIds.length >= hostTable.capacity) {
+      throw Object.assign(
+        new Error(`No available seat at table with host ${hostId} for guest ${guestId}`),
+        { status: 400 },
+      );
+    }
+
+    hostTable.guestIds.push(guestId);
+  }
+
   let score = 0;
   for (const table of tables) {
     for (let i = 0; i < table.memberIds.length; i += 1) {
@@ -181,6 +239,7 @@ export async function generateSeating(eventId: string) {
     score,
     tables,
     lockedMemberIds: [],
+    lockedGuestIds: [],
     isFinal: false,
   } as never);
 
