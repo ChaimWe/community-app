@@ -69,10 +69,30 @@ export async function generateSeating(eventId: string) {
     const programs = programsByMember.get(memberId);
     return names.some((name) => programs?.has(name));
   };
+  const agePrograms = [
+    "babies 1-5",
+    "kids: 6-12",
+    "kids 6-12",
+    "teens 13-17",
+    "young adults 18-30",
+    "young adults",
+    "women's club 20-40",
+    "women's club",
+    "young women's club",
+    "young_womens_club",
+    "middle women's club 40-65",
+    "middle women's club",
+    "elderly women 65+",
+    "elderly women",
+    "men 20-40",
+  ];
+  const hasAgeProgram = (memberId: string) => agePrograms.some((name) => hasProgram(memberId, name));
+  const ageProgramsForMember = (memberId: string) =>
+    new Set(agePrograms.filter((name) => hasProgram(memberId, name)));
   const priority = (memberId: string) => {
     if (hasProgram(memberId, "regular minyan")) return 0;
-    if (hasProgram(memberId, "young adults 18-30", "young adults")) return 1;
-    if (groupNamesByMember.has(memberId)) return 2;
+    if (groupNamesByMember.has(memberId)) return 1;
+    if (hasAgeProgram(memberId)) return 2;
     return 3;
   };
   const originalOrder = new Map(ids.map((id, index) => [id, index]));
@@ -123,10 +143,9 @@ export async function generateSeating(eventId: string) {
         if (hasProgram(id, "regular minyan") && hasProgram(other, "regular minyan")) {
           placementScore += 1_000_000;
         }
-        if (
-          hasProgram(id, "young adults 18-30", "young adults") &&
-          hasProgram(other, "young adults 18-30", "young adults")
-        ) {
+        const ageProgramsForId = ageProgramsForMember(id);
+        const ageProgramsForOther = ageProgramsForMember(other);
+        if ([...ageProgramsForId].some((name) => ageProgramsForOther.has(name))) {
           placementScore += 100_000;
         }
         const groupsForId = groupNamesByMember.get(id);
