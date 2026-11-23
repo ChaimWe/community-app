@@ -18,6 +18,7 @@ import { PageHeader } from "../components/PageHeader";
 import { SeatingMap } from "../features/seating/SeatingMap";
 import { SearchableMemberPicker } from "../features/members/SearchableMemberPicker";
 import { SearchableGuestPicker } from "../features/members/SearchableGuestPicker";
+import { GuestList } from "../features/members/GuestList";
 import { EVENT_TYPE_LABELS, memberName } from "../lib/labels";
 
 const eventTypes = Object.entries(EVENT_TYPE_LABELS).map(([value, label]) => ({ value, label }));
@@ -115,6 +116,9 @@ export function Events() {
           <Switch checked={includeArchived} onChange={setIncludeArchived} />
         </div>
       ) : null}
+      <section className="event-guests">
+        <GuestList hosts={members.data || []} readOnly={!isAdmin && session.data?.permission !== "edit"} />
+      </section>
       {events.isLoading ? (
         <Skeleton active />
       ) : activeEvents.length ? (

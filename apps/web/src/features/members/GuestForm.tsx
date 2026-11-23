@@ -1,17 +1,31 @@
-import { Form, Input, Button, Space, Spin } from "antd";
+import { Form, Input, Button, Select, Space, Spin } from "antd";
 import { GuestInput } from "../../api/guestHooks";
 import { Member } from "../../api/types";
+import { memberName } from "../../lib/labels";
 
 interface GuestFormProps {
   initial?: GuestInput;
-  hostMember: Member;
+  hostMember?: Member;
+  hosts?: Member[];
   onSubmit: (data: GuestInput) => Promise<void>;
   readOnly?: boolean;
   isLoading?: boolean;
+  onCancel?: () => void;
+  submitLabel?: string;
 }
 
-export function GuestForm({ initial, hostMember, onSubmit, readOnly = false, isLoading = false }: GuestFormProps) {
+export function GuestForm({
+  initial,
+  hostMember,
+  hosts,
+  onSubmit,
+  readOnly = false,
+  isLoading = false,
+  onCancel,
+  submitLabel = "Save Guest",
+}: GuestFormProps) {
   const [form] = Form.useForm();
+  const pickHost = !hostMember && hosts !== undefined;
 
   return (
     <Spin spinning={isLoading}>
@@ -25,7 +39,7 @@ export function GuestForm({ initial, hostMember, onSubmit, readOnly = false, isL
             telephone: "",
             email: "",
             comments: "",
-            guestOf: hostMember._id,
+            guestOf: hostMember?._id,
           }
         }
         onFinish={onSubmit}
@@ -58,16 +72,33 @@ export function GuestForm({ initial, hostMember, onSubmit, readOnly = false, isL
           <Input.TextArea placeholder="Add any notes about this guest" disabled={readOnly} rows={3} />
         </Form.Item>
 
-        <Form.Item name="guestOf" hidden>
-          <Input />
-        </Form.Item>
+        {pickHost ? (
+          <Form.Item label="Host member" name="guestOf" rules={[{ required: true, message: "Choose a host member" }]}>
+            <Select
+              showSearch
+              disabled={readOnly}
+              placeholder="Choose the member this guest belongs to"
+              optionFilterProp="label"
+              options={hosts!.map((member) => ({ value: String(member._id), label: memberName(member) }))}
+            />
+          </Form.Item>
+        ) : (
+          <Form.Item name="guestOf" hidden>
+            <Input />
+          </Form.Item>
+        )}
 
         {!readOnly && (
           <Form.Item>
             <Space>
               <Button type="primary" htmlType="submit" loading={isLoading}>
-                Save Guest
+                {submitLabel}
               </Button>
+              {onCancel && (
+                <Button onClick={onCancel} disabled={isLoading}>
+                  Cancel
+                </Button>
+              )}
             </Space>
           </Form.Item>
         )}

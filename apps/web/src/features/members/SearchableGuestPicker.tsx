@@ -36,7 +36,7 @@ export function SearchableGuestPicker({
 
   if (guests.isLoading) return <Spin />;
   if (!guests.data || guests.data.length === 0) {
-    return <Empty description="No guests yet. Add guests to members first." />;
+    return <Empty description="No guests yet. Add guests in the Guests section above." />;
   }
 
   return (
